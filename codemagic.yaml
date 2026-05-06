@@ -16,6 +16,17 @@ workflows:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
+            SWIFT_VERSION=6.0 \
+            build 2>&1 | grep -E "error:|warning:|BUILD|FAILED|SUCCEED" || true
+
+          echo "=== Full build attempt ==="
+          xcodebuild -project PlayTalk.xcodeproj \
+            -scheme PlayTalk \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            SWIFT_VERSION=6.0 \
             build
       - name: Push build result to GitHub
         script: |
