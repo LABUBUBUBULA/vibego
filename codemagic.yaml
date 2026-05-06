@@ -8,4 +8,5 @@ workflows:
     scripts:
       - name: Create Xcode project
         script: |
-          echo "Remote access enabled - use VNC to create project"
+          echo "Remote access enabled - waiting for VNC connection..."
+          sleep 1800
