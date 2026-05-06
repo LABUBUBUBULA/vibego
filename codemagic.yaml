@@ -8,32 +8,34 @@ workflows:
       groups:
         - github_credentials
     scripts:
+      - name: Install XcodeGen
+        script: |
+          brew install xcodegen
+
+      - name: Generate Xcode project
+        script: |
+          cd $CM_BUILD_DIR
+          xcodegen generate
+          echo "=== Generated .xcodeproj ==="
+          ls -la PlayTalk.xcodeproj/
+
       - name: Build PlayTalk
         script: |
+          cd $CM_BUILD_DIR
           xcodebuild -project PlayTalk.xcodeproj \
             -scheme PlayTalk \
             -destination 'generic/platform=iOS' \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            SWIFT_VERSION=6.0 \
-            build 2>&1 | grep -E "error:|warning:|BUILD|FAILED|SUCCEED" || true
-
-          echo "=== Full build attempt ==="
-          xcodebuild -project PlayTalk.xcodeproj \
-            -scheme PlayTalk \
-            -destination 'generic/platform=iOS' \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            SWIFT_VERSION=6.0 \
             build
-      - name: Push build result to GitHub
+
+      - name: Push to GitHub
         script: |
           cd $CM_BUILD_DIR
           git config user.email "codemagic@playtalk.com"
           git config user.name "Codemagic CI"
           git remote set-url origin https://x-access-token:$GITHUB_TOKEN@github.com/agentdev-fan/PlayTalk.git
           git add -A
-          git commit -m "Verified iOS project - build passed on Codemagic" || echo "Nothing to commit"
+          git commit -m "Add generated .xcodeproj from Codemagic" || echo "Nothing to commit"
           git push origin main
