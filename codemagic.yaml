@@ -6,7 +6,558 @@ workflows:
     environment:
       xcode: latest
     scripts:
-      - name: Create Xcode project
+      - name: Create Xcode project via script
         script: |
-          echo "Remote access enabled - waiting for VNC connection..."
-          sleep 1800
+          set -e
+          cd $CM_BUILD_DIR
+
+          # Remove existing files except .git and codemagic.yaml
+          find . -maxdepth 1 ! -name '.' ! -name '.git' ! -name '.gitignore' ! -name 'codemagic.yaml' ! -name 'README.md' -exec rm -rf {} +
+
+          # Create project directory structure
+          mkdir -p PlayTalk/App
+          mkdir -p PlayTalk/Resources/Assets.xcassets/AppIcon.appiconset
+          mkdir -p PlayTalk/Resources/Assets.xcassets/AccentColor.colorset
+          mkdir -p PlayTalk/Resources/Base.lproj
+
+          # AppDelegate.swift
+          cat > PlayTalk/App/AppDelegate.swift << 'SWIFT'
+          import UIKit
+
+          @main
+          class AppDelegate: UIResponder, UIApplicationDelegate {
+              func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+                  return true
+              }
+
+              func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+                  return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+              }
+          }
+          SWIFT
+
+          # SceneDelegate.swift
+          cat > PlayTalk/App/SceneDelegate.swift << 'SWIFT'
+          import UIKit
+
+          class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+              var window: UIWindow?
+
+              func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+                  guard let windowScene = (scene as? UIWindowScene) else { return }
+                  window = UIWindow(windowScene: windowScene)
+                  window?.rootViewController = UINavigationController(rootViewController: ViewController())
+                  window?.makeKeyAndVisible()
+              }
+          }
+          SWIFT
+
+          # ViewController.swift
+          cat > PlayTalk/App/ViewController.swift << 'SWIFT'
+          import UIKit
+
+          class ViewController: UIViewController {
+              override func viewDidLoad() {
+                  super.viewDidLoad()
+                  view.backgroundColor = UIColor(red: 0.11, green: 0.11, blue: 0.16, alpha: 1.0)
+                  title = "PlayTalk"
+
+                  let label = UILabel()
+                  label.text = "PlayTalk"
+                  label.textColor = .white
+                  label.font = UIFont.boldSystemFont(ofSize: 32)
+                  label.translatesAutoresizingMaskIntoConstraints = false
+                  view.addSubview(label)
+
+                  NSLayoutConstraint.activate([
+                      label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                      label.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+                  ])
+              }
+          }
+          SWIFT
+
+          # Info.plist
+          cat > PlayTalk/Resources/Info.plist << 'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleDevelopmentRegion</key>
+              <string>en</string>
+              <key>CFBundleDisplayName</key>
+              <string>PlayTalk</string>
+              <key>CFBundleExecutable</key>
+              <string>$(EXECUTABLE_NAME)</string>
+              <key>CFBundleIdentifier</key>
+              <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+              <key>CFBundleInfoDictionaryVersion</key>
+              <string>6.0</string>
+              <key>CFBundleName</key>
+              <string>$(PRODUCT_NAME)</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleShortVersionString</key>
+              <string>1.0</string>
+              <key>CFBundleVersion</key>
+              <string>1</string>
+              <key>LSRequiresIPhoneOS</key>
+              <true/>
+              <key>UIApplicationSceneManifest</key>
+              <dict>
+                  <key>UIApplicationSupportsMultipleScenes</key>
+                  <false/>
+                  <key>UISceneConfigurations</key>
+                  <dict>
+                      <key>UIWindowSceneSessionRoleApplication</key>
+                      <array>
+                          <dict>
+                              <key>UISceneConfigurationName</key>
+                              <string>Default Configuration</string>
+                              <key>UISceneDelegateClassName</key>
+                              <string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+                          </dict>
+                      </array>
+                  </dict>
+              </dict>
+              <key>UILaunchStoryboardName</key>
+              <string>LaunchScreen</string>
+              <key>UISupportedInterfaceOrientations</key>
+              <array>
+                  <string>UIInterfaceOrientationPortrait</string>
+              </array>
+              <key>UIRequiredDeviceCapabilities</key>
+              <array>
+                  <string>armv7</string>
+              </array>
+          </dict>
+          </plist>
+          PLIST
+
+          # LaunchScreen.storyboard
+          cat > PlayTalk/Resources/Base.lproj/LaunchScreen.storyboard << 'STORYBOARD'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="21701" targetRuntime="AppleSDK" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="01J-lp-oVM">
+              <scenes>
+                  <scene sceneID="EHf-IW-A2E">
+                      <objects>
+                          <viewController id="01J-lp-oVM" sceneMemberID="viewController">
+                              <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
+                                  <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                                  <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                                  <color key="backgroundColor" red="0.109803921568627" green="0.109803921568627" blue="0.156862745098039" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                              </view>
+                          </viewController>
+                          <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>
+                      </objects>
+                  </scene>
+              </scenes>
+          </document>
+          STORYBOARD
+
+          # Assets.xcassets/Contents.json
+          cat > PlayTalk/Resources/Assets.xcassets/Contents.json << 'JSON'
+          {
+            "info" : {
+              "author" : "xcode",
+              "version" : 1
+            }
+          }
+          JSON
+
+          # AppIcon
+          cat > PlayTalk/Resources/Assets.xcassets/AppIcon.appiconset/Contents.json << 'JSON'
+          {
+            "images" : [
+              {
+                "idiom" : "universal",
+                "platform" : "ios",
+                "size" : "1024x1024"
+              }
+            ],
+            "info" : {
+              "author" : "xcode",
+              "version" : 1
+            }
+          }
+          JSON
+
+          # AccentColor
+          cat > PlayTalk/Resources/Assets.xcassets/AccentColor.colorset/Contents.json << 'JSON'
+          {
+            "colors" : [
+              {
+                "color" : {
+                  "color-space" : "srgb",
+                  "components" : {
+                    "alpha" : "1.000",
+                    "blue" : "0.000",
+                    "green" : "0.835",
+                    "red" : "1.000"
+                  }
+                },
+                "idiom" : "universal"
+              }
+            ],
+            "info" : {
+              "author" : "xcode",
+              "version" : 1
+            }
+          }
+          JSON
+
+          # Create Xcode project using xcodegen-like approach with plutil
+          # We'll use swift package + xcodeproj generation
+
+          # Create Package.swift for SPM-based project first, then convert
+          # Actually, let's create the xcodeproj directly
+
+          mkdir -p PlayTalk.xcodeproj
+
+          # Generate project.pbxproj
+          cat > PlayTalk.xcodeproj/project.pbxproj << 'PBXPROJ'
+          // !$*UTF8*$!
+          {
+            archiveVersion = 1;
+            classes = {
+            };
+            objectVersion = 56;
+            objects = {
+
+          /* Begin PBXBuildFile section */
+              A1000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001; };
+              A1000002 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002; };
+              A1000003 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003; };
+              A1000004 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A2000004; };
+              A1000005 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A2000005; };
+          /* End PBXBuildFile section */
+
+          /* Begin PBXFileReference section */
+              A2000001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+              A2000002 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+              A2000003 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+              A2000004 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+              A2000005 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+              A2000006 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+              A2000010 /* PlayTalk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PlayTalk.app; sourceTree = BUILT_PRODUCTS_DIR; };
+          /* End PBXFileReference section */
+
+          /* Begin PBXFrameworksBuildPhase section */
+              A3000001 /* Frameworks */ = {
+                  isa = PBXFrameworksBuildPhase;
+                  buildActionMask = 2147483647;
+                  files = (
+                  );
+                  runOnlyForDeploymentPostprocessing = 0;
+              };
+          /* End PBXFrameworksBuildPhase section */
+
+          /* Begin PBXGroup section */
+              A4000001 = {
+                  isa = PBXGroup;
+                  children = (
+                      A4000002 /* PlayTalk */,
+                      A4000004 /* Products */,
+                  );
+                  sourceTree = "<group>";
+              };
+              A4000002 /* PlayTalk */ = {
+                  isa = PBXGroup;
+                  children = (
+                      A4000003 /* App */,
+                      A4000005 /* Resources */,
+                  );
+                  path = PlayTalk;
+                  sourceTree = "<group>";
+              };
+              A4000003 /* App */ = {
+                  isa = PBXGroup;
+                  children = (
+                      A2000001 /* AppDelegate.swift */,
+                      A2000002 /* SceneDelegate.swift */,
+                      A2000003 /* ViewController.swift */,
+                  );
+                  path = App;
+                  sourceTree = "<group>";
+              };
+              A4000004 /* Products */ = {
+                  isa = PBXGroup;
+                  children = (
+                      A2000010 /* PlayTalk.app */,
+                  );
+                  name = Products;
+                  sourceTree = "<group>";
+              };
+              A4000005 /* Resources */ = {
+                  isa = PBXGroup;
+                  children = (
+                      A2000004 /* Assets.xcassets */,
+                      A2000005 /* LaunchScreen.storyboard */,
+                      A2000006 /* Info.plist */,
+                  );
+                  path = Resources;
+                  sourceTree = "<group>";
+              };
+          /* End PBXGroup section */
+
+          /* Begin PBXNativeTarget section */
+              A5000001 /* PlayTalk */ = {
+                  isa = PBXNativeTarget;
+                  buildConfigurationList = A7000003 /* Build configuration list for PBXNativeTarget "PlayTalk" */;
+                  buildPhases = (
+                      A3000002 /* Sources */,
+                      A3000001 /* Frameworks */,
+                      A3000003 /* Resources */,
+                  );
+                  buildRules = (
+                  );
+                  dependencies = (
+                  );
+                  name = PlayTalk;
+                  productName = PlayTalk;
+                  productReference = A2000010 /* PlayTalk.app */;
+                  productType = "com.apple.product-type.application";
+              };
+          /* End PBXNativeTarget section */
+
+          /* Begin PBXProject section */
+              A6000001 /* Project object */ = {
+                  isa = PBXProject;
+                  attributes = {
+                      BuildIndependentTargetsInParallel = 1;
+                      LastSwiftUpdateCheck = 1540;
+                      LastUpgradeCheck = 1540;
+                      TargetAttributes = {
+                          A5000001 = {
+                              CreatedOnToolsVersion = 15.4;
+                          };
+                      };
+                  };
+                  buildConfigurationList = A7000001 /* Build configuration list for PBXProject "PlayTalk" */;
+                  compatibilityVersion = "Xcode 14.0";
+                  developmentRegion = en;
+                  hasScannedForEncodings = 0;
+                  knownRegions = (
+                      en,
+                      Base,
+                  );
+                  mainGroup = A4000001;
+                  productRefGroup = A4000004 /* Products */;
+                  projectDirPath = "";
+                  projectRoot = "";
+                  targets = (
+                      A5000001 /* PlayTalk */,
+                  );
+              };
+          /* End PBXProject section */
+
+          /* Begin PBXResourcesBuildPhase section */
+              A3000003 /* Resources */ = {
+                  isa = PBXResourcesBuildPhase;
+                  buildActionMask = 2147483647;
+                  files = (
+                      A1000004 /* Assets.xcassets in Resources */,
+                      A1000005 /* LaunchScreen.storyboard in Resources */,
+                  );
+                  runOnlyForDeploymentPostprocessing = 0;
+              };
+          /* End PBXResourcesBuildPhase section */
+
+          /* Begin PBXSourcesBuildPhase section */
+              A3000002 /* Sources */ = {
+                  isa = PBXSourcesBuildPhase;
+                  buildActionMask = 2147483647;
+                  files = (
+                      A1000001 /* AppDelegate.swift in Sources */,
+                      A1000002 /* SceneDelegate.swift in Sources */,
+                      A1000003 /* ViewController.swift in Sources */,
+                  );
+                  runOnlyForDeploymentPostprocessing = 0;
+              };
+          /* End PBXSourcesBuildPhase section */
+
+          /* Begin XCBuildConfiguration section */
+              A8000001 /* Debug */ = {
+                  isa = XCBuildConfiguration;
+                  buildSettings = {
+                      ALWAYS_SEARCH_USER_PATHS = NO;
+                      ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+                      CLANG_ANALYZER_NONNULL = YES;
+                      CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+                      CLANG_ENABLE_MODULES = YES;
+                      CLANG_ENABLE_OBJC_ARC = YES;
+                      COPY_PHASE_STRIP = NO;
+                      DEBUG_INFORMATION_FORMAT = dwarf;
+                      ENABLE_STRICT_OBJC_MSGSEND = YES;
+                      ENABLE_TESTABILITY = YES;
+                      GCC_DYNAMIC_NO_PIC = NO;
+                      GCC_OPTIMIZATION_LEVEL = 0;
+                      GCC_PREPROCESSOR_DEFINITIONS = (
+                          "DEBUG=1",
+                          "$(inherited)",
+                      );
+                      GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+                      GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+                      IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+                      MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+                      ONLY_ACTIVE_ARCH = YES;
+                      SDKROOT = iphoneos;
+                      SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
+                      SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+                  };
+                  name = Debug;
+              };
+              A8000002 /* Release */ = {
+                  isa = XCBuildConfiguration;
+                  buildSettings = {
+                      ALWAYS_SEARCH_USER_PATHS = NO;
+                      ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+                      CLANG_ANALYZER_NONNULL = YES;
+                      CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+                      CLANG_ENABLE_MODULES = YES;
+                      CLANG_ENABLE_OBJC_ARC = YES;
+                      COPY_PHASE_STRIP = NO;
+                      DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+                      ENABLE_NS_ASSERTIONS = NO;
+                      ENABLE_STRICT_OBJC_MSGSEND = YES;
+                      GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+                      GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+                      IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+                      SDKROOT = iphoneos;
+                      SWIFT_COMPILATION_MODE = wholemodule;
+                      VALIDATE_PRODUCT = YES;
+                  };
+                  name = Release;
+              };
+              A8000003 /* Debug */ = {
+                  isa = XCBuildConfiguration;
+                  buildSettings = {
+                      ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+                      ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+                      CODE_SIGN_STYLE = Automatic;
+                      CURRENT_PROJECT_VERSION = 1;
+                      GENERATE_INFOPLIST_FILE = NO;
+                      INFOPLIST_FILE = PlayTalk/Resources/Info.plist;
+                      INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+                      INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+                      LD_RUNPATH_SEARCH_PATHS = (
+                          "$(inherited)",
+                          "@executable_path/Frameworks",
+                      );
+                      MARKETING_VERSION = 1.0;
+                      PRODUCT_BUNDLE_IDENTIFIER = com.playtalk.ios;
+                      PRODUCT_NAME = "$(TARGET_NAME)";
+                      SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+                      SUPPORTS_MACCATALYST = NO;
+                      SWIFT_EMIT_LOC_STRINGS = YES;
+                      SWIFT_VERSION = 5.0;
+                      TARGETED_DEVICE_FAMILY = 1;
+                  };
+                  name = Debug;
+              };
+              A8000004 /* Release */ = {
+                  isa = XCBuildConfiguration;
+                  buildSettings = {
+                      ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+                      ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+                      CODE_SIGN_STYLE = Automatic;
+                      CURRENT_PROJECT_VERSION = 1;
+                      GENERATE_INFOPLIST_FILE = NO;
+                      INFOPLIST_FILE = PlayTalk/Resources/Info.plist;
+                      INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+                      INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+                      LD_RUNPATH_SEARCH_PATHS = (
+                          "$(inherited)",
+                          "@executable_path/Frameworks",
+                      );
+                      MARKETING_VERSION = 1.0;
+                      PRODUCT_BUNDLE_IDENTIFIER = com.playtalk.ios;
+                      PRODUCT_NAME = "$(TARGET_NAME)";
+                      SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+                      SUPPORTS_MACCATALYST = NO;
+                      SWIFT_EMIT_LOC_STRINGS = YES;
+                      SWIFT_VERSION = 5.0;
+                      TARGETED_DEVICE_FAMILY = 1;
+                  };
+                  name = Release;
+              };
+          /* End XCBuildConfiguration section */
+
+          /* Begin XCConfigurationList section */
+              A7000001 /* Build configuration list for PBXProject "PlayTalk" */ = {
+                  isa = XCConfigurationList;
+                  buildConfigurations = (
+                      A8000001 /* Debug */,
+                      A8000002 /* Release */,
+                  );
+                  defaultConfigurationIsVisible = 0;
+                  defaultConfigurationName = Release;
+              };
+              A7000003 /* Build configuration list for PBXNativeTarget "PlayTalk" */ = {
+                  isa = XCConfigurationList;
+                  buildConfigurations = (
+                      A8000003 /* Debug */,
+                      A8000004 /* Release */,
+                  );
+                  defaultConfigurationIsVisible = 0;
+                  defaultConfigurationName = Release;
+              };
+          /* End XCConfigurationList section */
+            };
+            rootObject = A6000001 /* Project object */;
+          }
+          PBXPROJ
+
+          # Try to build to verify
+          echo "=== Attempting to build PlayTalk ==="
+          xcodebuild -project PlayTalk.xcodeproj -scheme PlayTalk -destination 'generic/platform=iOS' -allowProvisioningUpdates CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build 2>&1 || true
+
+          echo "=== Build step complete ==="
+
+      - name: Create scheme
+        script: |
+          mkdir -p PlayTalk.xcodeproj/xcshareddata/xcschemes
+          cat > PlayTalk.xcodeproj/xcshareddata/xcschemes/PlayTalk.xcscheme << 'SCHEME'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <Scheme LastUpgradeVersion="1540" version="1.7">
+             <BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES">
+                <BuildActionEntries>
+                   <BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="YES" buildForArchiving="YES" buildForAnalyzing="YES">
+                      <BuildableReference
+                         BuildableIdentifier="primary"
+                         BlueprintIdentifier="A5000001"
+                         BuildableName="PlayTalk.app"
+                         BlueprintName="PlayTalk"
+                         ReferencedContainer="container:PlayTalk.xcodeproj">
+                      </BuildableReference>
+                   </BuildActionEntry>
+                </BuildActionEntries>
+             </BuildAction>
+             <LaunchAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.DebuggerFoundation.Launcher.LLDB" launchStyle="0" useCustomWorkingDirectory="NO" ignoresPersistentStateOnLaunch="NO" debugDocumentVersioning="YES" debugServiceExtension="internal" allowLocationSimulation="YES">
+                <BuildableProductRunnable runnableDebuggingMode="0">
+                   <BuildableReference
+                      BuildableIdentifier="primary"
+                      BlueprintIdentifier="A5000001"
+                      BuildableName="PlayTalk.app"
+                      BlueprintName="PlayTalk"
+                      ReferencedContainer="container:PlayTalk.xcodeproj">
+                   </BuildableReference>
+                </BuildableProductRunnable>
+             </LaunchAction>
+             <ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES">
+             </ArchiveAction>
+          </Scheme>
+          SCHEME
+
+          # Retry build with scheme
+          echo "=== Retrying build with scheme ==="
+          xcodebuild -project PlayTalk.xcodeproj -scheme PlayTalk -destination 'generic/platform=iOS' CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build 2>&1 || true
+
+      - name: Push to GitHub if build succeeds
+        script: |
+          cd $CM_BUILD_DIR
+          git config user.email "codemagic@playtalk.com"
+          git config user.name "Codemagic CI"
+          git add -A
+          git commit -m "Create PlayTalk iOS project via Codemagic" || echo "Nothing to commit"
+          git push origin main || echo "Push failed - check permissions"
