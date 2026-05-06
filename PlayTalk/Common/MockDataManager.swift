@@ -2,6 +2,7 @@ import UIKit
 
 /// Mock 数据管理器 - 对应 Android GameMic 的 MockDataRepository.java
 /// 提供所有页面的模拟数据，不接真实 API
+@MainActor
 final class MockDataManager {
 
     static let shared = MockDataManager()
