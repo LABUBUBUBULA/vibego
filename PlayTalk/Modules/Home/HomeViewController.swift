@@ -131,6 +131,9 @@ extension HomeViewController: UITableViewDataSource, UITableViewDelegate {
     /// 点击进入语音房（对应 Android 的 VoiceRoomActivity 跳转）
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        // TODO: 跳转到 VoiceRoomViewController
+        let vc = VoiceRoomViewController()
+        vc.room = rooms[indexPath.row]
+        vc.isOwner = false
+        navigationController?.pushViewController(vc, animated: true)
     }
 }

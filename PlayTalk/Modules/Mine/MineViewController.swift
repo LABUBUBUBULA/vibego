@@ -432,7 +432,9 @@ class MineViewController: UIViewController {
         case 0: break // TODO: CollectionActivity
         case 1: break // TODO: BrowseHistoryActivity
         case 2: break // TODO: CustomerServiceActivity
-        case 3: break // TODO: SettingsActivity
+        case 3:
+            let vc = SettingsViewController()
+            navigationController?.pushViewController(vc, animated: true)
         default: break
         }
     }
@@ -461,7 +463,13 @@ class MineViewController: UIViewController {
         )
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Log Out", style: .destructive) { _ in
-            // TODO: 清除用户数据，跳转到 WelcomeActivity
+            // 清除用户数据，跳转到欢迎页（对应 Android → WelcomeActivity）
+            UserManager.shared.logout()
+            guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                  let window = windowScene.windows.first else { return }
+            let nav = UINavigationController(rootViewController: WelcomeViewController())
+            window.rootViewController = nav
+            window.makeKeyAndVisible()
         })
         present(alert, animated: true)
     }

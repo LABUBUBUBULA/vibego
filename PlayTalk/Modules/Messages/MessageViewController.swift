@@ -165,6 +165,8 @@ extension MessageViewController: UITableViewDataSource, UITableViewDelegate {
     /// 点击消息进入聊天页面（对应 Android ChatActivity）
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        // TODO: 跳转到 ChatViewController
+        let vc = ChatViewController()
+        vc.chatUser = messages[indexPath.row]
+        navigationController?.pushViewController(vc, animated: true)
     }
 }

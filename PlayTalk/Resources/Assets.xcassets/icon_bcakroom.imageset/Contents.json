@@ -1,0 +1,13 @@
+{
+  "images" : [
+    {
+      "filename" : "icon_bcakroom.png",
+      "idiom" : "universal",
+      "scale" : "1x"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
