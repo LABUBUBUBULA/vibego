@@ -68,8 +68,12 @@ class WelcomeViewController: UIViewController {
     /// 协议勾选框（对应 Android iv_checkbox）
     private let checkboxButton: UIButton = {
         let btn = UIButton(type: .custom)
-        btn.setImage(UIImage(named: "ic_checkbox_unchecked"), for: .normal)
-        btn.setImage(UIImage(named: "ic_checkbox_checked"), for: .selected)
+        // 使用系统图标确保显示（资源图片在虚拟机上可能加载失败）
+        let uncheckedImage = UIImage(named: "ic_checkbox_unchecked") ?? UIImage(systemName: "square")
+        let checkedImage = UIImage(named: "ic_checkbox_checked") ?? UIImage(systemName: "checkmark.square.fill")
+        btn.setImage(uncheckedImage, for: .normal)
+        btn.setImage(checkedImage, for: .selected)
+        btn.tintColor = Theme.Colors.primaryYellow
         btn.translatesAutoresizingMaskIntoConstraints = false
         return btn
     }()
