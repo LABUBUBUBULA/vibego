@@ -13,12 +13,17 @@ targets:
     type: application
     platform: iOS
     sources:
-      - PlayTalk/App
-      - PlayTalk/Models
-      - PlayTalk/Common
-      - PlayTalk/Modules
+      - path: PlayTalk/App
+        type: group
+      - path: PlayTalk/Models
+        type: group
+      - path: PlayTalk/Common
+        type: group
+      - path: PlayTalk/Modules
+        type: group
     resources:
-      - PlayTalk/Resources/Assets.xcassets
+      - path: PlayTalk/Resources/Assets.xcassets
+        type: file
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.playtalk.ios

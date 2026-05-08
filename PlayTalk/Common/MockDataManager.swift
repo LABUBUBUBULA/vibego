@@ -128,7 +128,7 @@ final class MockDataManager {
             return VoiceRoom(
                 roomId: "room_\(1000 + i)",
                 title: roomTitles[i],
-                coverImage: "room_cover_\(i + 1)",
+                coverImage: "\(tags[i].lowercased())_\((i % 6) + 1)",
                 coverUri: nil,
                 gameTag: tags[i],
                 description: descriptions[i],
@@ -198,10 +198,10 @@ final class MockDataManager {
     }
 
     let gameChannels: [GameChannel] = [
-        GameChannel(name: "PUBG", discussionCount: "2228.21K People Discuss", coverImage: "game_pubg"),
-        GameChannel(name: "Minecraft", discussionCount: "4864.21K People Discuss", coverImage: "game_minecraft"),
-        GameChannel(name: "Fortnite", discussionCount: "4868.34K People Discuss", coverImage: "game_fortnite"),
-        GameChannel(name: "TheSims", discussionCount: "3256.88K People Discuss", coverImage: "game_thesims")
+        GameChannel(name: "PUBG", discussionCount: "228 People Discuss", coverImage: "ph_pubg"),
+        GameChannel(name: "Minecraft", discussionCount: "486 People Discuss", coverImage: "ph_minecraft"),
+        GameChannel(name: "Fortnite", discussionCount: "368 People Discuss", coverImage: "ph_fortnite"),
+        GameChannel(name: "TheSims", discussionCount: "325 People Discuss", coverImage: "ph_thesims")
     ]
 
     // MARK: - 消息数据

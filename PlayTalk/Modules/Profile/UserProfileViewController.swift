@@ -53,21 +53,16 @@ class UserProfileViewController: UIViewController {
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
         ])
 
-        // 头像（90x90 圆形）
-        let avatarView = UIView()
+        // 头像（90x90 圆形）— 使用真实头像图片
+        let avatarView = UIImageView()
+        avatarView.image = UIImage(named: user.avatarImage)
         avatarView.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.3)
         avatarView.layer.cornerRadius = 45
+        avatarView.layer.masksToBounds = true
         avatarView.layer.borderWidth = 3
         avatarView.layer.borderColor = Theme.Colors.primaryYellow.cgColor
+        avatarView.contentMode = .scaleAspectFill
         avatarView.translatesAutoresizingMaskIntoConstraints = false
-
-        let avatarLabel = UILabel()
-        avatarLabel.text = String(user.name.prefix(1))
-        avatarLabel.font = Theme.Fonts.bold(36)
-        avatarLabel.textColor = Theme.Colors.primaryYellow
-        avatarLabel.textAlignment = .center
-        avatarLabel.translatesAutoresizingMaskIntoConstraints = false
-        avatarView.addSubview(avatarLabel)
 
         // 昵称
         let nameLabel = UILabel()
@@ -123,9 +118,6 @@ class UserProfileViewController: UIViewController {
             avatarView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             avatarView.widthAnchor.constraint(equalToConstant: 90),
             avatarView.heightAnchor.constraint(equalToConstant: 90),
-
-            avatarLabel.centerXAnchor.constraint(equalTo: avatarView.centerXAnchor),
-            avatarLabel.centerYAnchor.constraint(equalTo: avatarView.centerYAnchor),
 
             nameLabel.topAnchor.constraint(equalTo: avatarView.bottomAnchor, constant: 12),
             nameLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),

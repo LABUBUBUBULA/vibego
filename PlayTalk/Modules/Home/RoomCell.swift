@@ -1,7 +1,7 @@
 import UIKit
 
 /// 语音房卡片 Cell - 对应 Android 的 item_game_discussion.xml
-/// 布局：左侧封面(100x100) | 右侧标题+热度+国旗+标签+描述
+/// 布局：左侧封面(84x84) | 右侧标题+热度+标签+描述
 class RoomCell: UITableViewCell {
     static let reuseId = "RoomCell"
 
@@ -16,23 +16,15 @@ class RoomCell: UITableViewCell {
         return v
     }()
 
-    /// 房间封面（100x100dp，12dp 圆角）
-    private let coverView: UIView = {
-        let v = UIView()
-        v.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.2)
-        v.layer.cornerRadius = 12
-        v.translatesAutoresizingMaskIntoConstraints = false
-        return v
-    }()
-
-    /// 封面占位图标
-    private let coverIconLabel: UILabel = {
-        let label = UILabel()
-        label.text = "🎮"
-        label.font = UIFont.systemFont(ofSize: 32)
-        label.textAlignment = .center
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
+    /// 房间封面图片（84x84，12dp 圆角）
+    private let coverImageView: UIImageView = {
+        let iv = UIImageView()
+        iv.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.2)
+        iv.layer.cornerRadius = 12
+        iv.layer.masksToBounds = true
+        iv.contentMode = .scaleAspectFill
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        return iv
     }()
 
     /// 房间标题（最多1行省略）
@@ -104,8 +96,7 @@ class RoomCell: UITableViewCell {
 
     private func setupUI() {
         contentView.addSubview(containerView)
-        containerView.addSubview(coverView)
-        coverView.addSubview(coverIconLabel)
+        containerView.addSubview(coverImageView)
         containerView.addSubview(titleLabel)
         containerView.addSubview(hotLabel)
         containerView.addSubview(gameTagLabel)
@@ -113,32 +104,23 @@ class RoomCell: UITableViewCell {
         containerView.addSubview(memberCountLabel)
 
         NSLayoutConstraint.activate([
-            // 卡片容器（左右 16dp 边距）
             containerView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
             containerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             containerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             containerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -4),
 
-            // 封面图（100x100dp，左侧）
-            coverView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 8),
-            coverView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
-            coverView.widthAnchor.constraint(equalToConstant: 84),
-            coverView.heightAnchor.constraint(equalToConstant: 84),
+            coverImageView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 8),
+            coverImageView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
+            coverImageView.widthAnchor.constraint(equalToConstant: 84),
+            coverImageView.heightAnchor.constraint(equalToConstant: 84),
 
-            // 封面占位图标
-            coverIconLabel.centerXAnchor.constraint(equalTo: coverView.centerXAnchor),
-            coverIconLabel.centerYAnchor.constraint(equalTo: coverView.centerYAnchor),
-
-            // 标题（封面右侧）
             titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 12),
-            titleLabel.leadingAnchor.constraint(equalTo: coverView.trailingAnchor, constant: 12),
+            titleLabel.leadingAnchor.constraint(equalTo: coverImageView.trailingAnchor, constant: 12),
             titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: hotLabel.leadingAnchor, constant: -8),
 
-            // 热度（右上角）
             hotLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 12),
             hotLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
 
-            // 游戏标签 + 在线人数
             gameTagLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 6),
             gameTagLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             gameTagLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 50),
@@ -147,7 +129,6 @@ class RoomCell: UITableViewCell {
             memberCountLabel.centerYAnchor.constraint(equalTo: gameTagLabel.centerYAnchor),
             memberCountLabel.leadingAnchor.constraint(equalTo: gameTagLabel.trailingAnchor, constant: 8),
 
-            // 描述（底部，2行）
             descriptionLabel.topAnchor.constraint(equalTo: gameTagLabel.bottomAnchor, constant: 6),
             descriptionLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             descriptionLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
@@ -156,13 +137,14 @@ class RoomCell: UITableViewCell {
 
     // MARK: - 数据绑定
 
-    /// 绑定语音房数据到 Cell
-    /// - Parameter room: 语音房模型
+    /// 绑定语音房数据到 Cell — 使用真实图片
     func configure(with room: VoiceRoom) {
         titleLabel.text = room.title
         hotLabel.text = "🔥 \(room.hotCountText)"
         gameTagLabel.text = "  \(room.gameTag)  "
         descriptionLabel.text = room.description
         memberCountLabel.text = "👥 \(room.memberCount) online"
+        // 加载真实封面图片（对应 Android coverResId）
+        coverImageView.image = UIImage(named: room.coverImage)
     }
 }

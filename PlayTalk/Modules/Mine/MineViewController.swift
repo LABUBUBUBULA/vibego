@@ -158,23 +158,24 @@ class MineViewController: UIViewController {
     /// 创建圆形头像（90x90dp，对应 Android 的 CardView 包裹）
     private func createAvatarView() -> UIView {
         let container = UIView()
-        container.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.3)
-        container.layer.cornerRadius = 45
-        container.layer.borderWidth = 3
-        container.layer.borderColor = Theme.Colors.primaryYellow.cgColor
         container.translatesAutoresizingMaskIntoConstraints = false
 
-        let label = UILabel()
-        label.text = String(user.name.prefix(1))
-        label.font = Theme.Fonts.bold(36)
-        label.textColor = Theme.Colors.primaryYellow
-        label.textAlignment = .center
-        label.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(label)
+        let imageView = UIImageView()
+        imageView.image = UIImage(named: user.avatarImage)
+        imageView.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.3)
+        imageView.layer.cornerRadius = 45
+        imageView.layer.masksToBounds = true
+        imageView.layer.borderWidth = 3
+        imageView.layer.borderColor = Theme.Colors.primaryYellow.cgColor
+        imageView.contentMode = .scaleAspectFill
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(imageView)
 
         NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: container.centerYAnchor)
+            imageView.topAnchor.constraint(equalTo: container.topAnchor),
+            imageView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            imageView.bottomAnchor.constraint(equalTo: container.bottomAnchor)
         ])
         return container
     }

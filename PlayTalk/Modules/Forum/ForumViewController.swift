@@ -261,18 +261,14 @@ class ForumViewController: UIViewController {
         let row = UIView()
         row.translatesAutoresizingMaskIntoConstraints = false
 
-        // 频道封面（56x56dp，8dp 圆角）
-        let coverView = UIView()
+        // 频道封面（48x48dp，8dp 圆角）— 使用真实游戏图片
+        let coverView = UIImageView()
+        coverView.image = UIImage(named: channel.coverImage)
         coverView.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.15)
         coverView.layer.cornerRadius = 8
+        coverView.layer.masksToBounds = true
+        coverView.contentMode = .scaleAspectFill
         coverView.translatesAutoresizingMaskIntoConstraints = false
-
-        let coverLabel = UILabel()
-        coverLabel.text = "🎮"
-        coverLabel.font = UIFont.systemFont(ofSize: 24)
-        coverLabel.textAlignment = .center
-        coverLabel.translatesAutoresizingMaskIntoConstraints = false
-        coverView.addSubview(coverLabel)
 
         // 游戏名称（16sp bold）
         let nameLabel = UILabel()
@@ -305,9 +301,6 @@ class ForumViewController: UIViewController {
             coverView.centerYAnchor.constraint(equalTo: row.centerYAnchor),
             coverView.widthAnchor.constraint(equalToConstant: 48),
             coverView.heightAnchor.constraint(equalToConstant: 48),
-
-            coverLabel.centerXAnchor.constraint(equalTo: coverView.centerXAnchor),
-            coverLabel.centerYAnchor.constraint(equalTo: coverView.centerYAnchor),
 
             nameLabel.topAnchor.constraint(equalTo: row.topAnchor, constant: 6),
             nameLabel.leadingAnchor.constraint(equalTo: coverView.trailingAnchor, constant: 12),
