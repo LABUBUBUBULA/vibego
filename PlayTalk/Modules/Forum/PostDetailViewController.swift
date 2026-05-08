@@ -60,7 +60,9 @@ class PostDetailViewController: UIViewController {
         btn.backgroundColor = Theme.Colors.cardBackground
         btn.layer.cornerRadius = 20
         btn.contentHorizontalAlignment = .left
-        btn.contentEdgeInsets = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
+        var config = UIButton.Configuration.plain()
+        config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16)
+        btn.configuration = config
         btn.translatesAutoresizingMaskIntoConstraints = false
         return btn
     }()

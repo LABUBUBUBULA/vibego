@@ -125,8 +125,15 @@ class EditProfileViewController: UIViewController {
         let nickname = nicknameField.text?.trimmingCharacters(in: .whitespaces) ?? ""
         guard !nickname.isEmpty else { return }
 
-        UserManager.shared.currentUser?.name = nickname
-        UserManager.shared.currentUser?.bio = bioField.text ?? ""
+        // 通过UserManager的方法更新资料
+        UserManager.shared.updateUserProfile(
+            nickname: nickname,
+            gender: UserManager.shared.currentUser?.gender ?? "male",
+            avatarUri: nil,
+            country: "US",
+            countryFlag: UserManager.shared.currentUser?.countryFlag ?? "flag_usa",
+            interests: UserManager.shared.currentUser?.interests ?? ""
+        )
 
         navigationController?.popViewController(animated: true)
     }
