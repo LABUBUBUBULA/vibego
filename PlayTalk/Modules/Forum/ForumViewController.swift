@@ -319,6 +319,20 @@ class ForumViewController: UIViewController {
             arrowLabel.trailingAnchor.constraint(equalTo: row.trailingAnchor)
         ])
 
+        // 点击进入游戏频道详情
+        row.isUserInteractionEnabled = true
+        row.accessibilityLabel = channel.name
+        let tap = UITapGestureRecognizer(target: self, action: #selector(channelTapped(_:)))
+        row.addGestureRecognizer(tap)
+
         return row
+    }
+
+    /// 游戏频道点击 → GameForumViewController
+    @objc private func channelTapped(_ gesture: UITapGestureRecognizer) {
+        let gameName = gesture.view?.accessibilityLabel ?? ""
+        let vc = GameForumViewController()
+        vc.gameName = gameName
+        navigationController?.pushViewController(vc, animated: true)
     }
 }

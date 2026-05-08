@@ -1,13 +1,13 @@
 {
-  "images" : [
+  "images": [
     {
-      "filename" : "thesims_3.webp",
-      "idiom" : "universal",
-      "scale" : "1x"
+      "filename": "thesims_3.png",
+      "idiom": "universal",
+      "scale": "1x"
     }
   ],
-  "info" : {
-    "author" : "xcode",
-    "version" : 1
+  "info": {
+    "author": "xcode",
+    "version": 1
   }
 }

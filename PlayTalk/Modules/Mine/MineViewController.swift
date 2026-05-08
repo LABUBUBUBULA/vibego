@@ -231,8 +231,12 @@ class MineViewController: UIViewController {
             (formatCount(mockData.friendsCount), "Friends")
         ]
 
-        for data in statsData {
+        for (index, data) in statsData.enumerated() {
             let item = UIView()
+            item.tag = index
+            let tap = UITapGestureRecognizer(target: self, action: #selector(statsTapped(_:)))
+            item.addGestureRecognizer(tap)
+            item.isUserInteractionEnabled = true
 
             let countLabel = UILabel()
             countLabel.text = data.count
@@ -281,8 +285,12 @@ class MineViewController: UIViewController {
         stack.distribution = .fillEqually
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        // 余额卡片
+        // 余额卡片（点击进入充值页）
         let balanceCard = createInfoCard(title: "Balance", value: "\(mockData.coinBalance)", icon: "💰")
+        let balanceTap = UITapGestureRecognizer(target: self, action: #selector(rechargeTapped))
+        balanceCard.addGestureRecognizer(balanceTap)
+        balanceCard.isUserInteractionEnabled = true
+
         // 等级卡片
         let levelCard = createInfoCard(title: "Level", value: "Lv.\(user.level)", icon: "⭐")
 
@@ -423,6 +431,25 @@ class MineViewController: UIViewController {
         row.addGestureRecognizer(tap)
 
         return row
+    }
+
+    /// 余额卡片点击 → 充值页
+    @objc private func rechargeTapped() {
+        let vc = RechargeViewController()
+        navigationController?.pushViewController(vc, animated: true)
+    }
+
+    /// 粉丝/关注/好友点击（对应 Android 的 3 个跳转）
+    @objc private func statsTapped(_ gesture: UITapGestureRecognizer) {
+        guard let tag = gesture.view?.tag else { return }
+        let vc = FansViewController()
+        switch tag {
+        case 0: vc.listType = .fans
+        case 1: vc.listType = .following
+        case 2: vc.listType = .friends
+        default: return
+        }
+        navigationController?.pushViewController(vc, animated: true)
     }
 
     /// 菜单项点击（对应 Android 的 4 个跳转）

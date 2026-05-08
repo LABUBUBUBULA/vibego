@@ -136,10 +136,19 @@ class MessageViewController: UIViewController {
     @objc private func functionButtonTapped(_ gesture: UITapGestureRecognizer) {
         guard let tag = gesture.view?.tag else { return }
         switch tag {
-        case 0: break // TODO: 跳转到我的房间
-        case 1: break // TODO: 跳转到系统通知 SystemNotificationActivity
-        case 2: break // TODO: 跳转到新关注 NewFollowActivity
-        case 3: break // TODO: 跳转到访客 NewVisitorActivity
+        case 0: break // 我的房间（暂无）
+        case 1:
+            let vc = SystemNotificationViewController()
+            navigationController?.pushViewController(vc, animated: true)
+        case 2:
+            let vc = FansViewController()
+            vc.listType = .fans
+            navigationController?.pushViewController(vc, animated: true)
+        case 3:
+            let vc = FansViewController()
+            vc.listType = .fans
+            vc.title = "Visitors"
+            navigationController?.pushViewController(vc, animated: true)
         default: break
         }
     }
