@@ -38,7 +38,7 @@ class ChatViewController: UIViewController {
     }()
 
     /// 消息输入框
-    private let inputField: UITextField = {
+    private lazy var inputField: UITextField = {
         let tf = UITextField()
         tf.placeholder = "Type a message..."
         tf.textColor = Theme.Colors.textPrimary
@@ -47,14 +47,18 @@ class ChatViewController: UIViewController {
         tf.layer.cornerRadius = 20
         tf.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 16, height: 0))
         tf.leftViewMode = .always
+        tf.returnKeyType = .send
+        tf.delegate = self
         tf.translatesAutoresizingMaskIntoConstraints = false
         return tf
     }()
 
     /// 发送按钮（对应 Android ic_chat_send）
     private let sendButton: UIButton = {
-        let btn = UIButton(type: .custom)
-        btn.setImage(UIImage(named: "ic_chat_send"), for: .normal)
+        let btn = UIButton(type: .system)
+        let image = UIImage(named: "ic_chat_send") ?? UIImage(systemName: "paperplane.fill")
+        btn.setImage(image, for: .normal)
+        btn.tintColor = Theme.Colors.primaryYellow
         btn.translatesAutoresizingMaskIntoConstraints = false
         return btn
     }()
@@ -180,6 +184,23 @@ extension ChatViewController: UITableViewDataSource, UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, estimatedHeightForRowAt indexPath: IndexPath) -> CGFloat {
         return 50
+    }
+
+    func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
+        UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            let delete = UIAction(title: "Delete", image: UIImage(systemName: "trash"), attributes: .destructive) { _ in
+                self?.chatMessages.remove(at: indexPath.row)
+                tableView.deleteRows(at: [indexPath], with: .automatic)
+            }
+            return UIMenu(children: [delete])
+        }
+    }
+}
+
+extension ChatViewController: UITextFieldDelegate {
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        sendTapped()
+        return true
     }
 }
 

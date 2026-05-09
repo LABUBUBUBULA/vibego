@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		05B8C3F3911A4E8FA64C1D29 /* LegalTextViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D4B7A2E6C9F41D0A13B5E7C /* LegalTextViewController.swift */; };
 		0A2324212C09FE34D7F0DBFC /* MessageCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3AEB4801F6C78AF68334AD4 /* MessageCell.swift */; };
 		0F7EA3856CEAF87FE2FA3ED0 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95E574E6175A37EEA07F501F /* Message.swift */; };
 		1326845224DCA99D244B8523 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0880F972975216526B9C3D3D /* User.swift */; };
@@ -34,6 +35,7 @@
 		5084120C56E347CC89633BAF /* ForumViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForumViewController.swift; sourceTree = "<group>"; };
 		7BA9B6CCF282108A809EDCF9 /* VoiceRoom.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceRoom.swift; sourceTree = "<group>"; };
 		8602F85E89846993B7BC6BD4 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		8D4B7A2E6C9F41D0A13B5E7C /* LegalTextViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalTextViewController.swift; sourceTree = "<group>"; };
 		8B06134207E8189B4040186D /* PlayTalk.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PlayTalk.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		91B35BADA38261C906ACFA2A /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		95E574E6175A37EEA07F501F /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
@@ -80,6 +82,7 @@
 		5CF2215FB12C14C4EFFAFF35 /* Mine */ = {
 			isa = PBXGroup;
 			children = (
+				8D4B7A2E6C9F41D0A13B5E7C /* LegalTextViewController.swift */,
 				33B231050815F4B686C43972 /* MineViewController.swift */,
 			);
 			path = Mine;
@@ -203,6 +206,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				05B8C3F3911A4E8FA64C1D29 /* LegalTextViewController.swift in Sources */,
 				5A356A5318E468DA39A4687E /* AppDelegate.swift in Sources */,
 				712BE298D95FC7AFA60BB59F /* CategoryCell.swift in Sources */,
 				BD9F9979214845D0B450D7CF /* ForumViewController.swift in Sources */,

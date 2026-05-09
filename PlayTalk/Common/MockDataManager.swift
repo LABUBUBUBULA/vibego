@@ -184,6 +184,36 @@ final class MockDataManager {
         }
     }
 
+    /// 我的收藏 - 对应 Android RoomCollectionManager.getCollections
+    func getCollectedRooms() -> [VoiceRoom] {
+        (userCreatedRooms + voiceRooms).filter { $0.isCollected }
+    }
+
+    /// 浏览记录 - 对应 Android BrowseHistoryManager，最新浏览排前，最多50条
+    private var browseHistoryRoomIds: [String] = []
+
+    func addBrowseHistory(_ room: VoiceRoom) {
+        browseHistoryRoomIds.removeAll { $0 == room.roomId }
+        browseHistoryRoomIds.insert(room.roomId, at: 0)
+        if browseHistoryRoomIds.count > 50 {
+            browseHistoryRoomIds = Array(browseHistoryRoomIds.prefix(50))
+        }
+    }
+
+    func getBrowseHistoryRooms() -> [VoiceRoom] {
+        browseHistoryRoomIds.compactMap { roomId in
+            (userCreatedRooms + voiceRooms).first { $0.roomId == roomId }
+        }
+    }
+
+    /// 我的房间 - 对应 Android MessageFragment.findUserRoom，只找当前用户作为房主的房间
+    func getMyRoom() -> VoiceRoom? {
+        guard let currentUser = UserManager.shared.currentUser else { return nil }
+        return (userCreatedRooms + voiceRooms).first { room in
+            room.hostName == currentUser.name || room.hostAvatarImage == currentUser.avatarImage
+        }
+    }
+
     func saveMinimizedRoom(_ room: VoiceRoom, isOwner: Bool) {
         minimizedRoom = room
         minimizedRoomIsOwner = isOwner

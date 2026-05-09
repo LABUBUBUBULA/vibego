@@ -292,8 +292,11 @@ class MineViewController: UIViewController {
         balanceCard.addGestureRecognizer(balanceTap)
         balanceCard.isUserInteractionEnabled = true
 
-        // 等级卡片
+        // 等级卡片（点击进入等级页，对应 Android UserLevelActivity）
         let levelCard = createInfoCard(title: "Level", value: "Lv.\(user.level)", icon: "⭐")
+        let levelTap = UITapGestureRecognizer(target: self, action: #selector(levelTapped))
+        levelCard.addGestureRecognizer(levelTap)
+        levelCard.isUserInteractionEnabled = true
 
         stack.addArrangedSubview(balanceCard)
         stack.addArrangedSubview(levelCard)
@@ -440,6 +443,12 @@ class MineViewController: UIViewController {
         navigationController?.pushViewController(vc, animated: true)
     }
 
+    /// 等级卡片点击 → 等级页（对应 Android UserLevelActivity）
+    @objc private func levelTapped() {
+        let vc = UserLevelViewController()
+        navigationController?.pushViewController(vc, animated: true)
+    }
+
     /// 粉丝/关注/好友点击（对应 Android 的 3 个跳转）
     @objc private func statsTapped(_ gesture: UITapGestureRecognizer) {
         guard let tag = gesture.view?.tag else { return }
@@ -457,9 +466,19 @@ class MineViewController: UIViewController {
     @objc private func menuItemTapped(_ gesture: UITapGestureRecognizer) {
         guard let tag = gesture.view?.tag else { return }
         switch tag {
-        case 0: break // TODO: CollectionActivity
-        case 1: break // TODO: BrowseHistoryActivity
-        case 2: break // TODO: CustomerServiceActivity
+        case 0:
+            // 我的收藏，对应 Android CollectionActivity
+            let vc = RoomListViewController()
+            vc.listType = .collection
+            navigationController?.pushViewController(vc, animated: true)
+        case 1:
+            // 浏览记录，对应 Android BrowseHistoryActivity
+            let vc = RoomListViewController()
+            vc.listType = .browseHistory
+            navigationController?.pushViewController(vc, animated: true)
+        case 2:
+            // 客服聊天，对应 Android CustomerServiceActivity
+            navigationController?.pushViewController(CustomerServiceViewController(), animated: true)
         case 3:
             let vc = SettingsViewController()
             navigationController?.pushViewController(vc, animated: true)

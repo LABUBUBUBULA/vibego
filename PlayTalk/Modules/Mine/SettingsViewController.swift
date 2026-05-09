@@ -84,15 +84,31 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
         tableView.deselectRow(at: indexPath, animated: true)
         let item = sections[indexPath.section].items[indexPath.row]
 
-        if item.title == "Delete Account" {
-            // 注销账号确认弹窗（对应 iOS 审核要求：一键注销）
+        switch item.title {
+        case "Notifications":
+            showOptionSheet(title: "Notifications", options: ["All notifications", "Mentions only", "Off"])
+        case "Privacy":
+            showOptionSheet(title: "Privacy", options: ["Public profile", "Friends only", "Private"])
+        case "Language":
+            showOptionSheet(title: "Language", options: ["English", "简体中文", "Español"])
+        case "Terms of Service":
+            navigationController?.pushViewController(LegalTextViewController(type: .terms), animated: true)
+        case "Privacy Policy":
+            navigationController?.pushViewController(LegalTextViewController(type: .privacy), animated: true)
+        case "About":
+            navigationController?.pushViewController(LegalTextViewController(type: .about), animated: true)
+        case "Clear Cache":
+            let alert = UIAlertController(title: nil, message: "Cache cleared successfully", preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+        case "Delete Account":
             let alert = UIAlertController(
                 title: "Delete Account",
                 message: "This will permanently delete your account and all data. This action cannot be undone.",
                 preferredStyle: .alert
             )
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-            alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
+            alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { _ in
                 UserManager.shared.logout()
                 guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                       let window = windowScene.windows.first else { return }
@@ -101,10 +117,29 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
                 window.makeKeyAndVisible()
             })
             present(alert, animated: true)
-        } else if item.title == "Clear Cache" {
-            let alert = UIAlertController(title: nil, message: "Cache cleared successfully", preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            present(alert, animated: true)
+        default:
+            break
+        }
+    }
+
+    private func showOptionSheet(title: String, options: [String]) {
+        let sheet = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
+        options.forEach { option in
+            sheet.addAction(UIAlertAction(title: option, style: .default) { [weak self] _ in
+                self?.showToast("\(option) selected")
+            })
+        }
+        sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        sheet.popoverPresentationController?.sourceView = view
+        sheet.popoverPresentationController?.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.maxY, width: 0, height: 0)
+        present(sheet, animated: true)
+    }
+
+    private func showToast(_ message: String) {
+        let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+        present(alert, animated: true)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak alert] in
+            alert?.dismiss(animated: true)
         }
     }
 }

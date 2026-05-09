@@ -68,7 +68,7 @@ class MessageViewController: UIViewController {
             ("🏠", "My Room"),
             ("🔔", "System"),
             ("👥", "Follow"),
-            ("��", "Visitor")
+            ("👣", "Visitor")
         ]
 
         let stackView = UIStackView()
@@ -136,20 +136,59 @@ class MessageViewController: UIViewController {
     @objc private func functionButtonTapped(_ gesture: UITapGestureRecognizer) {
         guard let tag = gesture.view?.tag else { return }
         switch tag {
-        case 0: break // 我的房间（暂无）
+        case 0:
+            openMyRoom()
         case 1:
             let vc = SystemNotificationViewController()
             navigationController?.pushViewController(vc, animated: true)
         case 2:
             let vc = FansViewController()
-            vc.listType = .fans
+            vc.listType = .following
             navigationController?.pushViewController(vc, animated: true)
         case 3:
             let vc = FansViewController()
-            vc.listType = .fans
-            vc.title = "Visitors"
+            vc.listType = .visitors
             navigationController?.pushViewController(vc, animated: true)
         default: break
+        }
+    }
+
+    /// My Room 点击：对应 Android MessageFragment.findUserRoom，有房进房，无房 toast
+    private func openMyRoom() {
+        guard UserManager.shared.currentUser != nil else {
+            showToast("Please sign in first")
+            return
+        }
+        guard let room = MockDataManager.shared.getMyRoom() else {
+            showToast("You haven't created a voice room")
+            return
+        }
+        MockDataManager.shared.addBrowseHistory(room)
+        let vc = VoiceRoomViewController()
+        vc.room = room
+        vc.isOwner = true
+        navigationController?.pushViewController(vc, animated: true)
+    }
+
+    private func showToast(_ message: String) {
+        let toast = UILabel()
+        toast.text = message
+        toast.font = Theme.Fonts.regular(14)
+        toast.textColor = .white
+        toast.backgroundColor = UIColor.black.withAlphaComponent(0.7)
+        toast.textAlignment = .center
+        toast.layer.cornerRadius = 8
+        toast.layer.masksToBounds = true
+        toast.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(toast)
+        NSLayoutConstraint.activate([
+            toast.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            toast.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -80),
+            toast.widthAnchor.constraint(greaterThanOrEqualToConstant: 100),
+            toast.heightAnchor.constraint(equalToConstant: 36)
+        ])
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            toast.removeFromSuperview()
         }
     }
 }

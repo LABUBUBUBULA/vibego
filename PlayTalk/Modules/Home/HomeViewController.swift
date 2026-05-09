@@ -240,6 +240,8 @@ class HomeViewController: UIViewController {
     }
 
     private func openRoom(_ room: VoiceRoom, isOwner: Bool) {
+        // 记录浏览历史，对应 Android BrowseHistoryManager.addBrowseHistory
+        MockDataManager.shared.addBrowseHistory(room)
         let vc = VoiceRoomViewController()
         vc.room = room
         vc.isOwner = isOwner

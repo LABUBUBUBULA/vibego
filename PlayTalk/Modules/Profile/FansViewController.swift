@@ -11,6 +11,7 @@ class FansViewController: UIViewController {
         case fans       // 粉丝
         case following  // 关注
         case friends    // 好友
+        case visitors   // 访客
     }
 
     /// 页面类型
@@ -53,6 +54,7 @@ class FansViewController: UIViewController {
         case .fans: title = "Fans"
         case .following: title = "Following"
         case .friends: title = "Friends"
+        case .visitors: title = "Visitors"
         }
     }
 
@@ -73,6 +75,7 @@ class FansViewController: UIViewController {
         case .fans: users = Array(allUsers[0..<10])
         case .following: users = Array(allUsers[5..<15])
         case .friends: users = Array(allUsers[3..<12])
+        case .visitors: users = Array(allUsers[10..<20])
         }
         tableView.reloadData()
     }
