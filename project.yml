@@ -21,9 +21,12 @@ targets:
         type: group
       - path: PlayTalk/Modules
         type: group
-    resources:
-      - path: PlayTalk/Resources/Assets.xcassets
-        type: file
+      # 资源必须放进 sources 并指定 resources build phase；当前 XcodeGen 在虚拟机里忽略 target.resources。
+      - path: PlayTalk/Resources
+        type: group
+        buildPhase: resources
+        excludes:
+          - Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.playtalk.ios
