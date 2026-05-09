@@ -94,7 +94,7 @@ class RoomListViewController: UIViewController {
         let vc = VoiceRoomViewController()
         vc.room = room
         vc.isOwner = false
-        navigationController?.pushViewController(vc, animated: true)
+        pushAppViewController(vc, animated: true)
     }
 }
 

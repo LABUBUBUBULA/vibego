@@ -218,7 +218,7 @@ class HomeViewController: UIViewController {
     }
 
     @objc private func createRoomTapped() {
-        navigationController?.pushViewController(CreateRoomViewController(), animated: true)
+        pushAppViewController(CreateRoomViewController(), animated: true)
     }
 
     @objc private func backRoomTapped() {
@@ -245,7 +245,7 @@ class HomeViewController: UIViewController {
         let vc = VoiceRoomViewController()
         vc.room = room
         vc.isOwner = isOwner
-        navigationController?.pushViewController(vc, animated: true)
+        pushAppViewController(vc, animated: true)
     }
 
     private func showToast(_ message: String) {

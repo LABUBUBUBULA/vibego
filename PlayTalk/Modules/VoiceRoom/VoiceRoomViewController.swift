@@ -162,11 +162,15 @@ class VoiceRoomViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = Theme.Colors.darkBackground
-        navigationController?.setNavigationBarHidden(true, animated: false)
         setupUI()
         setupActions()
         loadRoomData()
         loadInitialMessages()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: animated)
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -372,7 +376,7 @@ class VoiceRoomViewController: UIViewController {
             return
         }
         let vc = SettingsViewController()
-        navigationController?.pushViewController(vc, animated: true)
+        pushAppViewController(vc, animated: true)
     }
 
     @objc private func menuTapped() {

@@ -31,18 +31,7 @@ class MineViewController: UIViewController {
         super.viewDidLoad()
         title = "Mine"
         view.backgroundColor = Theme.Colors.darkBackground
-        navigationController?.setNavigationBarHidden(true, animated: false)
         setupUI()
-    }
-
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        navigationController?.setNavigationBarHidden(true, animated: animated)
-    }
-
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        navigationController?.setNavigationBarHidden(false, animated: animated)
     }
 
     // MARK: - 界面搭建
@@ -287,13 +276,13 @@ class MineViewController: UIViewController {
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         // 余额卡片（点击进入充值页）
-        let balanceCard = createInfoCard(title: "Balance", value: "\(mockData.coinBalance)", icon: "💰")
+        let balanceCard = createInfoCard(title: "Balance", value: "\(mockData.coinBalance)", icon: "icon_coin")
         let balanceTap = UITapGestureRecognizer(target: self, action: #selector(rechargeTapped))
         balanceCard.addGestureRecognizer(balanceTap)
         balanceCard.isUserInteractionEnabled = true
 
         // 等级卡片（点击进入等级页，对应 Android UserLevelActivity）
-        let levelCard = createInfoCard(title: "Level", value: "Lv.\(user.level)", icon: "⭐")
+        let levelCard = createInfoCard(title: "Level", value: "Lv.\(user.level)", icon: "level_badge")
         let levelTap = UITapGestureRecognizer(target: self, action: #selector(levelTapped))
         levelCard.addGestureRecognizer(levelTap)
         levelCard.isUserInteractionEnabled = true
@@ -310,10 +299,10 @@ class MineViewController: UIViewController {
         card.layer.cornerRadius = Theme.Dimensions.cornerRadius
         card.translatesAutoresizingMaskIntoConstraints = false
 
-        let iconLabel = UILabel()
-        iconLabel.text = icon
-        iconLabel.font = UIFont.systemFont(ofSize: 24)
-        iconLabel.translatesAutoresizingMaskIntoConstraints = false
+        let iconView = UIImageView()
+        iconView.image = UIImage(named: icon)
+        iconView.contentMode = .scaleAspectFit
+        iconView.translatesAutoresizingMaskIntoConstraints = false
 
         let titleLabel = UILabel()
         titleLabel.text = title
@@ -327,15 +316,17 @@ class MineViewController: UIViewController {
         valueLabel.textColor = Theme.Colors.primaryYellow
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        card.addSubview(iconLabel)
+        card.addSubview(iconView)
         card.addSubview(titleLabel)
         card.addSubview(valueLabel)
 
         NSLayoutConstraint.activate([
-            iconLabel.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
-            iconLabel.centerYAnchor.constraint(equalTo: card.centerYAnchor),
+            iconView.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
+            iconView.centerYAnchor.constraint(equalTo: card.centerYAnchor),
+            iconView.widthAnchor.constraint(equalToConstant: 28),
+            iconView.heightAnchor.constraint(equalToConstant: 28),
 
-            titleLabel.leadingAnchor.constraint(equalTo: iconLabel.trailingAnchor, constant: 8),
+            titleLabel.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 8),
             titleLabel.topAnchor.constraint(equalTo: card.topAnchor, constant: 16),
 
             valueLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
@@ -355,10 +346,10 @@ class MineViewController: UIViewController {
         container.translatesAutoresizingMaskIntoConstraints = false
 
         let menuItems: [(icon: String, title: String)] = [
-            ("⭐", "My Collection"),       // 对应 Android ic_collection
-            ("🕐", "Browse Records"),       // 对应 Android ic_browse
-            ("💬", "Customer Service"),      // 对应 Android ic_customer
-            ("⚙️", "Settings")              // 对应 Android ic_settings
+            ("ic_collection", "My Collection"),
+            ("ic_browse", "Browse Records"),
+            ("ic_customer", "Customer Service"),
+            ("ic_settings", "Settings")
         ]
 
         let stack = UIStackView()
@@ -397,10 +388,10 @@ class MineViewController: UIViewController {
         row.translatesAutoresizingMaskIntoConstraints = false
         row.heightAnchor.constraint(equalToConstant: 56).isActive = true
 
-        let iconLabel = UILabel()
-        iconLabel.text = icon
-        iconLabel.font = UIFont.systemFont(ofSize: 20)
-        iconLabel.translatesAutoresizingMaskIntoConstraints = false
+        let iconView = UIImageView()
+        iconView.image = UIImage(named: icon)
+        iconView.contentMode = .scaleAspectFit
+        iconView.translatesAutoresizingMaskIntoConstraints = false
 
         let titleLabel = UILabel()
         titleLabel.text = title
@@ -414,15 +405,17 @@ class MineViewController: UIViewController {
         arrowLabel.textColor = Theme.Colors.textSecondary
         arrowLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        row.addSubview(iconLabel)
+        row.addSubview(iconView)
         row.addSubview(titleLabel)
         row.addSubview(arrowLabel)
 
         NSLayoutConstraint.activate([
-            iconLabel.leadingAnchor.constraint(equalTo: row.leadingAnchor, constant: 16),
-            iconLabel.centerYAnchor.constraint(equalTo: row.centerYAnchor),
+            iconView.leadingAnchor.constraint(equalTo: row.leadingAnchor, constant: 16),
+            iconView.centerYAnchor.constraint(equalTo: row.centerYAnchor),
+            iconView.widthAnchor.constraint(equalToConstant: 22),
+            iconView.heightAnchor.constraint(equalToConstant: 22),
 
-            titleLabel.leadingAnchor.constraint(equalTo: iconLabel.trailingAnchor, constant: 12),
+            titleLabel.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 12),
             titleLabel.centerYAnchor.constraint(equalTo: row.centerYAnchor),
 
             arrowLabel.trailingAnchor.constraint(equalTo: row.trailingAnchor, constant: -16),
@@ -440,13 +433,13 @@ class MineViewController: UIViewController {
     /// 余额卡片点击 → 充值页
     @objc private func rechargeTapped() {
         let vc = RechargeViewController()
-        navigationController?.pushViewController(vc, animated: true)
+        pushAppViewController(vc, animated: true)
     }
 
     /// 等级卡片点击 → 等级页（对应 Android UserLevelActivity）
     @objc private func levelTapped() {
         let vc = UserLevelViewController()
-        navigationController?.pushViewController(vc, animated: true)
+        pushAppViewController(vc, animated: true)
     }
 
     /// 粉丝/关注/好友点击（对应 Android 的 3 个跳转）
@@ -459,7 +452,7 @@ class MineViewController: UIViewController {
         case 2: vc.listType = .friends
         default: return
         }
-        navigationController?.pushViewController(vc, animated: true)
+        pushAppViewController(vc, animated: true)
     }
 
     /// 菜单项点击（对应 Android 的 4 个跳转）
@@ -470,18 +463,18 @@ class MineViewController: UIViewController {
             // 我的收藏，对应 Android CollectionActivity
             let vc = RoomListViewController()
             vc.listType = .collection
-            navigationController?.pushViewController(vc, animated: true)
+            pushAppViewController(vc, animated: true)
         case 1:
             // 浏览记录，对应 Android BrowseHistoryActivity
             let vc = RoomListViewController()
             vc.listType = .browseHistory
-            navigationController?.pushViewController(vc, animated: true)
+            pushAppViewController(vc, animated: true)
         case 2:
             // 客服聊天，对应 Android CustomerServiceActivity
-            navigationController?.pushViewController(CustomerServiceViewController(), animated: true)
+            pushAppViewController(CustomerServiceViewController(), animated: true)
         case 3:
             let vc = SettingsViewController()
-            navigationController?.pushViewController(vc, animated: true)
+            pushAppViewController(vc, animated: true)
         default: break
         }
     }

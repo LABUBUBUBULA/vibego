@@ -65,10 +65,10 @@ class MessageViewController: UIViewController {
     /// 创建顶部4个功能按钮（对应 Android 的 My room / System Notion / Follow / Visitor）
     private func setupButtons() {
         let buttonData: [(icon: String, title: String)] = [
-            ("🏠", "My Room"),
-            ("🔔", "System"),
-            ("👥", "Follow"),
-            ("👣", "Visitor")
+            ("ic_mes_room", "My Room"),
+            ("ic_mes_notion", "System"),
+            ("ic_mes_follow", "Follow"),
+            ("ic_mes_visitor", "Visitor")
         ]
 
         let stackView = UIStackView()
@@ -99,11 +99,10 @@ class MessageViewController: UIViewController {
         container.translatesAutoresizingMaskIntoConstraints = false
 
         // 图标
-        let iconLabel = UILabel()
-        iconLabel.text = icon
-        iconLabel.font = UIFont.systemFont(ofSize: 28)
-        iconLabel.textAlignment = .center
-        iconLabel.translatesAutoresizingMaskIntoConstraints = false
+        let iconView = UIImageView()
+        iconView.image = UIImage(named: icon)
+        iconView.contentMode = .scaleAspectFit
+        iconView.translatesAutoresizingMaskIntoConstraints = false
 
         // 标题
         let titleLabel = UILabel()
@@ -113,14 +112,16 @@ class MessageViewController: UIViewController {
         titleLabel.textAlignment = .center
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        container.addSubview(iconLabel)
+        container.addSubview(iconView)
         container.addSubview(titleLabel)
 
         NSLayoutConstraint.activate([
-            iconLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            iconLabel.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
+            iconView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+            iconView.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
+            iconView.widthAnchor.constraint(equalToConstant: 28),
+            iconView.heightAnchor.constraint(equalToConstant: 28),
 
-            titleLabel.topAnchor.constraint(equalTo: iconLabel.bottomAnchor, constant: 4),
+            titleLabel.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: 4),
             titleLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor)
         ])
 
@@ -140,15 +141,15 @@ class MessageViewController: UIViewController {
             openMyRoom()
         case 1:
             let vc = SystemNotificationViewController()
-            navigationController?.pushViewController(vc, animated: true)
+            pushAppViewController(vc, animated: true)
         case 2:
             let vc = FansViewController()
             vc.listType = .following
-            navigationController?.pushViewController(vc, animated: true)
+            pushAppViewController(vc, animated: true)
         case 3:
             let vc = FansViewController()
             vc.listType = .visitors
-            navigationController?.pushViewController(vc, animated: true)
+            pushAppViewController(vc, animated: true)
         default: break
         }
     }
@@ -167,7 +168,7 @@ class MessageViewController: UIViewController {
         let vc = VoiceRoomViewController()
         vc.room = room
         vc.isOwner = true
-        navigationController?.pushViewController(vc, animated: true)
+        pushAppViewController(vc, animated: true)
     }
 
     private func showToast(_ message: String) {
@@ -215,6 +216,6 @@ extension MessageViewController: UITableViewDataSource, UITableViewDelegate {
         tableView.deselectRow(at: indexPath, animated: true)
         let vc = ChatViewController()
         vc.chatUser = messages[indexPath.row]
-        navigationController?.pushViewController(vc, animated: true)
+        pushAppViewController(vc, animated: true)
     }
 }

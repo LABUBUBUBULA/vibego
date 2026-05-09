@@ -326,6 +326,6 @@ class ForumViewController: UIViewController {
         let gameName = gesture.view?.accessibilityLabel ?? ""
         let vc = GameForumViewController()
         vc.gameName = gameName
-        navigationController?.pushViewController(vc, animated: true)
+        pushAppViewController(vc, animated: true)
     }
 }

@@ -102,7 +102,7 @@ extension FansViewController: UITableViewDataSource, UITableViewDelegate {
         tableView.deselectRow(at: indexPath, animated: true)
         let vc = UserProfileViewController()
         vc.user = users[indexPath.row]
-        navigationController?.pushViewController(vc, animated: true)
+        pushAppViewController(vc, animated: true)
     }
 }
 

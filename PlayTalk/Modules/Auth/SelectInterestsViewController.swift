@@ -295,7 +295,7 @@ class SelectInterestsViewController: UIViewController {
     private func navigateToMain() {
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let window = windowScene.windows.first else { return }
-        window.rootViewController = MainTabBarController()
+        window.rootViewController = AppNavigationController(rootViewController: MainTabBarController())
         window.makeKeyAndVisible()
         UIView.transition(with: window, duration: 0.3, options: .transitionCrossDissolve, animations: nil)
     }

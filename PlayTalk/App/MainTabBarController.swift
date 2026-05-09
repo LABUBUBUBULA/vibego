@@ -40,49 +40,33 @@ class MainTabBarController: UITabBarController {
 
     private func setupViewControllers() {
         let homeVC = HomeViewController()
-        let homeNav = UINavigationController(rootViewController: homeVC)
-        homeNav.tabBarItem = UITabBarItem(
+        homeVC.tabBarItem = UITabBarItem(
             title: "Home",
             image: UIImage(systemName: "house"),
             selectedImage: UIImage(systemName: "house.fill")
         )
 
         let forumVC = ForumViewController()
-        let forumNav = UINavigationController(rootViewController: forumVC)
-        forumNav.tabBarItem = UITabBarItem(
+        forumVC.tabBarItem = UITabBarItem(
             title: "Forum",
             image: UIImage(systemName: "bubble.left.and.bubble.right"),
             selectedImage: UIImage(systemName: "bubble.left.and.bubble.right.fill")
         )
 
         let messageVC = MessageViewController()
-        let messageNav = UINavigationController(rootViewController: messageVC)
-        messageNav.tabBarItem = UITabBarItem(
+        messageVC.tabBarItem = UITabBarItem(
             title: "Messages",
             image: UIImage(systemName: "message"),
             selectedImage: UIImage(systemName: "message.fill")
         )
 
         let mineVC = MineViewController()
-        let mineNav = UINavigationController(rootViewController: mineVC)
-        mineNav.tabBarItem = UITabBarItem(
+        mineVC.tabBarItem = UITabBarItem(
             title: "Mine",
             image: UIImage(systemName: "person"),
             selectedImage: UIImage(systemName: "person.fill")
         )
 
-        // Configure navigation bar appearance for all tabs
-        [homeNav, forumNav, messageNav, mineNav].forEach { nav in
-            let navAppearance = UINavigationBarAppearance()
-            navAppearance.configureWithOpaqueBackground()
-            navAppearance.backgroundColor = Theme.Colors.darkBackground
-            navAppearance.titleTextAttributes = [.foregroundColor: Theme.Colors.textPrimary]
-            navAppearance.largeTitleTextAttributes = [.foregroundColor: Theme.Colors.textPrimary]
-            nav.navigationBar.standardAppearance = navAppearance
-            nav.navigationBar.scrollEdgeAppearance = navAppearance
-            nav.navigationBar.tintColor = Theme.Colors.primaryYellow
-        }
-
-        viewControllers = [homeNav, forumNav, messageNav, mineNav]
+        viewControllers = [homeVC, forumVC, messageVC, mineVC]
     }
 }

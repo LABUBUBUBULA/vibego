@@ -108,7 +108,7 @@ class GameForumViewController: UIViewController {
     /// 发帖按钮
     @objc private func createPostTapped() {
         let vc = CreatePostViewController()
-        navigationController?.pushViewController(vc, animated: true)
+        pushAppViewController(vc, animated: true)
     }
 }
 
@@ -133,7 +133,7 @@ extension GameForumViewController: UITableViewDataSource, UITableViewDelegate {
         tableView.deselectRow(at: indexPath, animated: true)
         let vc = PostDetailViewController()
         vc.post = posts[indexPath.row]
-        navigationController?.pushViewController(vc, animated: true)
+        pushAppViewController(vc, animated: true)
     }
 }
 

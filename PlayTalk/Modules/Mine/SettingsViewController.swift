@@ -8,19 +8,13 @@ class SettingsViewController: UIViewController {
 
     /// 设置项列表
     private let sections: [(title: String, items: [(icon: String, title: String)])] = [
-        ("Account", [
-            ("🔔", "Notifications"),
-            ("🔒", "Privacy"),
-            ("🌐", "Language"),
-        ]),
         ("Support", [
-            ("📄", "Terms of Service"),
-            ("🛡️", "Privacy Policy"),
-            ("ℹ️", "About"),
+            ("ic_report", "Terms of Service"),
+            ("ic_see", "Privacy Policy"),
+            ("logo", "About PlayTalk"),
         ]),
-        ("Data", [
-            ("🗑️", "Clear Cache"),
-            ("🚪", "Delete Account"),
+        ("Account", [
+            ("ic_room_delete", "Delete Account"),
         ])
     ]
 
@@ -72,7 +66,9 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
         let item = sections[indexPath.section].items[indexPath.row]
-        cell.textLabel?.text = "\(item.icon) \(item.title)"
+        cell.imageView?.image = UIImage(named: item.icon)
+        cell.imageView?.contentMode = .scaleAspectFit
+        cell.textLabel?.text = item.title
         cell.textLabel?.textColor = item.title == "Delete Account" ? .systemRed : Theme.Colors.textPrimary
         cell.textLabel?.font = Theme.Fonts.regular(15)
         cell.backgroundColor = Theme.Colors.cardBackground
@@ -85,22 +81,12 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
         let item = sections[indexPath.section].items[indexPath.row]
 
         switch item.title {
-        case "Notifications":
-            showOptionSheet(title: "Notifications", options: ["All notifications", "Mentions only", "Off"])
-        case "Privacy":
-            showOptionSheet(title: "Privacy", options: ["Public profile", "Friends only", "Private"])
-        case "Language":
-            showOptionSheet(title: "Language", options: ["English", "简体中文", "Español"])
         case "Terms of Service":
-            navigationController?.pushViewController(LegalTextViewController(type: .terms), animated: true)
+            pushAppViewController(LegalTextViewController(type: .terms), animated: true)
         case "Privacy Policy":
-            navigationController?.pushViewController(LegalTextViewController(type: .privacy), animated: true)
-        case "About":
-            navigationController?.pushViewController(LegalTextViewController(type: .about), animated: true)
-        case "Clear Cache":
-            let alert = UIAlertController(title: nil, message: "Cache cleared successfully", preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default))
-            present(alert, animated: true)
+            pushAppViewController(LegalTextViewController(type: .privacy), animated: true)
+        case "About PlayTalk":
+            pushAppViewController(LegalTextViewController(type: .about), animated: true)
         case "Delete Account":
             let alert = UIAlertController(
                 title: "Delete Account",
@@ -122,24 +108,4 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
         }
     }
 
-    private func showOptionSheet(title: String, options: [String]) {
-        let sheet = UIAlertController(title: title, message: nil, preferredStyle: .actionSheet)
-        options.forEach { option in
-            sheet.addAction(UIAlertAction(title: option, style: .default) { [weak self] _ in
-                self?.showToast("\(option) selected")
-            })
-        }
-        sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        sheet.popoverPresentationController?.sourceView = view
-        sheet.popoverPresentationController?.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.maxY, width: 0, height: 0)
-        present(sheet, animated: true)
-    }
-
-    private func showToast(_ message: String) {
-        let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
-        present(alert, animated: true)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak alert] in
-            alert?.dismiss(animated: true)
-        }
-    }
 }

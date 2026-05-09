@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		05B8C3F3911A4E8FA64C1D29 /* LegalTextViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D4B7A2E6C9F41D0A13B5E7C /* LegalTextViewController.swift */; };
+		0A0E331D4C0A4E8791D90E8B /* NavigationHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6E6B2B1DB1E4C5789E3F3A2 /* NavigationHelper.swift */; };
 		0A2324212C09FE34D7F0DBFC /* MessageCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3AEB4801F6C78AF68334AD4 /* MessageCell.swift */; };
 		0F7EA3856CEAF87FE2FA3ED0 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95E574E6175A37EEA07F501F /* Message.swift */; };
 		1326845224DCA99D244B8523 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0880F972975216526B9C3D3D /* User.swift */; };
@@ -38,6 +39,7 @@
 		8D4B7A2E6C9F41D0A13B5E7C /* LegalTextViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalTextViewController.swift; sourceTree = "<group>"; };
 		8B06134207E8189B4040186D /* PlayTalk.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PlayTalk.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		91B35BADA38261C906ACFA2A /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		A6E6B2B1DB1E4C5789E3F3A2 /* NavigationHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationHelper.swift; sourceTree = "<group>"; };
 		95E574E6175A37EEA07F501F /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		96FCF8850F0D8775A3C8306B /* HomeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewController.swift; sourceTree = "<group>"; };
 		9A18B7CDF1FC9DCB563CE26A /* RoomCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomCell.swift; sourceTree = "<group>"; };
@@ -102,6 +104,7 @@
 			children = (
 				AB01E599E18EA805D3604E45 /* AppDelegate.swift */,
 				DFB50AB24D2AD72450212298 /* MainTabBarController.swift */,
+				A6E6B2B1DB1E4C5789E3F3A2 /* NavigationHelper.swift */,
 				91B35BADA38261C906ACFA2A /* SceneDelegate.swift */,
 				8602F85E89846993B7BC6BD4 /* Theme.swift */,
 			);
@@ -207,6 +210,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				05B8C3F3911A4E8FA64C1D29 /* LegalTextViewController.swift in Sources */,
+				0A0E331D4C0A4E8791D90E8B /* NavigationHelper.swift in Sources */,
 				5A356A5318E468DA39A4687E /* AppDelegate.swift in Sources */,
 				712BE298D95FC7AFA60BB59F /* CategoryCell.swift in Sources */,
 				BD9F9979214845D0B450D7CF /* ForumViewController.swift in Sources */,
