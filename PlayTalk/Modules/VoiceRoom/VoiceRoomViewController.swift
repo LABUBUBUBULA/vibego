@@ -69,6 +69,15 @@ class VoiceRoomViewController: UIViewController {
         return btn
     }()
 
+    /// 设置按钮（对应 Android ivSetting）
+    private let settingButton: UIButton = {
+        let btn = UIButton(type: .custom)
+        btn.setImage(UIImage(systemName: "gearshape.fill"), for: .normal)
+        btn.tintColor = Theme.Colors.primaryYellow
+        btn.translatesAutoresizingMaskIntoConstraints = false
+        return btn
+    }()
+
     /// 关闭按钮（对应 Android ivClose）
     private let closeButton: UIButton = {
         let btn = UIButton(type: .custom)
@@ -131,6 +140,15 @@ class VoiceRoomViewController: UIViewController {
         return btn
     }()
 
+    /// 功能菜单按钮（对应 Android ivMenu）
+    private let menuButton: UIButton = {
+        let btn = UIButton(type: .custom)
+        btn.setImage(UIImage(systemName: "ellipsis.circle.fill"), for: .normal)
+        btn.tintColor = Theme.Colors.primaryYellow
+        btn.translatesAutoresizingMaskIntoConstraints = false
+        return btn
+    }()
+
     /// 聊天输入按钮（对应 Android ivChatInput）
     private let chatInputButton: UIButton = {
         let btn = UIButton(type: .custom)
@@ -168,6 +186,7 @@ class VoiceRoomViewController: UIViewController {
         headerView.addSubview(roomNameLabel)
         headerView.addSubview(roomIdLabel)
         headerView.addSubview(favoriteButton)
+        headerView.addSubview(settingButton)
         headerView.addSubview(closeButton)
 
         // 麦位网格
@@ -182,6 +201,7 @@ class VoiceRoomViewController: UIViewController {
         bottomBar.addSubview(micButton)
         bottomBar.addSubview(volumeButton)
         bottomBar.addSubview(giftButton)
+        bottomBar.addSubview(menuButton)
         bottomBar.addSubview(chatInputButton)
 
         NSLayoutConstraint.activate([
@@ -211,7 +231,12 @@ class VoiceRoomViewController: UIViewController {
             closeButton.widthAnchor.constraint(equalToConstant: 40),
             closeButton.heightAnchor.constraint(equalToConstant: 40),
 
-            favoriteButton.trailingAnchor.constraint(equalTo: closeButton.leadingAnchor, constant: -8),
+            settingButton.trailingAnchor.constraint(equalTo: closeButton.leadingAnchor, constant: -8),
+            settingButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+            settingButton.widthAnchor.constraint(equalToConstant: 40),
+            settingButton.heightAnchor.constraint(equalToConstant: 40),
+
+            favoriteButton.trailingAnchor.constraint(equalTo: settingButton.leadingAnchor, constant: -8),
             favoriteButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
             favoriteButton.widthAnchor.constraint(equalToConstant: 40),
             favoriteButton.heightAnchor.constraint(equalToConstant: 40),
@@ -250,7 +275,12 @@ class VoiceRoomViewController: UIViewController {
             chatInputButton.widthAnchor.constraint(equalToConstant: 44),
             chatInputButton.heightAnchor.constraint(equalToConstant: 44),
 
-            giftButton.trailingAnchor.constraint(equalTo: chatInputButton.leadingAnchor, constant: -16),
+            menuButton.trailingAnchor.constraint(equalTo: chatInputButton.leadingAnchor, constant: -16),
+            menuButton.centerYAnchor.constraint(equalTo: bottomBar.centerYAnchor),
+            menuButton.widthAnchor.constraint(equalToConstant: 44),
+            menuButton.heightAnchor.constraint(equalToConstant: 44),
+
+            giftButton.trailingAnchor.constraint(equalTo: menuButton.leadingAnchor, constant: -16),
             giftButton.centerYAnchor.constraint(equalTo: bottomBar.centerYAnchor),
             giftButton.widthAnchor.constraint(equalToConstant: 44),
             giftButton.heightAnchor.constraint(equalToConstant: 44),
@@ -296,18 +326,34 @@ class VoiceRoomViewController: UIViewController {
     private func setupActions() {
         closeButton.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
         favoriteButton.addTarget(self, action: #selector(favoriteTapped), for: .touchUpInside)
+        settingButton.addTarget(self, action: #selector(settingTapped), for: .touchUpInside)
         micButton.addTarget(self, action: #selector(micToggleTapped), for: .touchUpInside)
         volumeButton.addTarget(self, action: #selector(volumeToggleTapped), for: .touchUpInside)
         giftButton.addTarget(self, action: #selector(giftTapped), for: .touchUpInside)
+        menuButton.addTarget(self, action: #selector(menuTapped), for: .touchUpInside)
         chatInputButton.addTarget(self, action: #selector(chatInputTapped), for: .touchUpInside)
     }
 
     /// 关闭房间
     @objc private func closeTapped() {
-        navigationController?.popViewController(animated: true)
-        if navigationController == nil {
-            dismiss(animated: true)
-        }
+        let alert = UIAlertController(title: "Close Room", message: nil, preferredStyle: .actionSheet)
+        alert.addAction(UIAlertAction(title: "Minimize", style: .default) { [weak self] _ in
+            guard let self = self, let room = self.room else { return }
+            MockDataManager.shared.saveMinimizedRoom(room, isOwner: self.isOwner)
+            self.navigationController?.popToRootViewController(animated: true)
+        })
+        alert.addAction(UIAlertAction(title: "Leave Room", style: .destructive) { [weak self] _ in
+            guard let self = self else { return }
+            if self.isOwner, let roomId = self.room?.roomId {
+                MockDataManager.shared.removeUserCreatedRoom(roomId: roomId)
+            }
+            self.navigationController?.popViewController(animated: true)
+            if self.navigationController == nil {
+                self.dismiss(animated: true)
+            }
+        })
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        present(alert, animated: true)
     }
 
     /// 收藏/取消收藏切换（对应 Android ivFavorite toggle）
@@ -315,6 +361,28 @@ class VoiceRoomViewController: UIViewController {
         isFavorited.toggle()
         let imageName = isFavorited ? "ic_room_favorite" : "ic_room_unfavorite"
         favoriteButton.setImage(UIImage(named: imageName), for: .normal)
+        if let roomId = room?.roomId {
+            MockDataManager.shared.setRoomCollected(roomId: roomId, isCollected: isFavorited)
+        }
+    }
+
+    @objc private func settingTapped() {
+        guard isOwner else {
+            showToast("You are not an administrator and cannot access settings")
+            return
+        }
+        let vc = SettingsViewController()
+        navigationController?.pushViewController(vc, animated: true)
+    }
+
+    @objc private func menuTapped() {
+        let alert = UIAlertController(title: "Room Menu", message: nil, preferredStyle: .actionSheet)
+        alert.addAction(UIAlertAction(title: "Clear Messages", style: .destructive) { [weak self] _ in
+            self?.messages.removeAll()
+            self?.messageTableView.reloadData()
+        })
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        present(alert, animated: true)
     }
 
     /// 麦克风开关切换（对应 Android ivMic toggle）
@@ -375,7 +443,14 @@ class VoiceRoomViewController: UIViewController {
         guard let seatIndex = gesture.view?.tag else { return }
 
         if seatIndex == 0 {
-            // 麦位1是房主位，不能操作
+            let hostName = room?.hostName ?? "Host"
+            let alert = UIAlertController(title: hostName, message: "Room Host", preferredStyle: .actionSheet)
+            alert.addAction(UIAlertAction(title: "Visit Homepage", style: .default))
+            alert.addAction(UIAlertAction(title: "Send Gift", style: .default) { [weak self] _ in
+                self?.giftTapped()
+            })
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            present(alert, animated: true)
             return
         }
 
@@ -393,9 +468,18 @@ class VoiceRoomViewController: UIViewController {
         } else if micLockedStatus[micIndex] {
             // 已锁定
             if isOwner {
-                // 房主可以解锁
-                micLockedStatus[micIndex] = false
-                updateMicSeatUI(at: seatIndex)
+                let alert = UIAlertController(title: "Mic \(seatIndex + 1)", message: "Locked", preferredStyle: .actionSheet)
+                alert.addAction(UIAlertAction(title: "Unlock", style: .default) { [weak self] _ in
+                    self?.micLockedStatus[micIndex] = false
+                    self?.updateMicSeatUI(at: seatIndex)
+                })
+                alert.addAction(UIAlertAction(title: "Unlock All", style: .default) { [weak self] _ in
+                    self?.setAllMicsLocked(false)
+                })
+                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+                present(alert, animated: true)
+            } else {
+                showToast("This microphone is locked")
             }
         } else {
             // 空位 → 上麦（对应 Android MicActionDialog）
@@ -410,6 +494,9 @@ class VoiceRoomViewController: UIViewController {
                 alert.addAction(UIAlertAction(title: "Lock Mic", style: .default) { [weak self] _ in
                     self?.micLockedStatus[micIndex] = true
                     self?.updateMicSeatUI(at: seatIndex)
+                })
+                alert.addAction(UIAlertAction(title: "Lock All Mic", style: .default) { [weak self] _ in
+                    self?.setAllMicsLocked(true)
                 })
             }
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
@@ -469,6 +556,35 @@ class VoiceRoomViewController: UIViewController {
         let lastRow = messages.count - 1
         if lastRow >= 0 {
             messageTableView.scrollToRow(at: IndexPath(row: lastRow, section: 0), at: .bottom, animated: true)
+        }
+    }
+
+    private func setAllMicsLocked(_ locked: Bool) {
+        for index in micLockedStatus.indices {
+            micLockedStatus[index] = locked
+            updateMicSeatUI(at: index + 1)
+        }
+    }
+
+    private func showToast(_ message: String) {
+        let toast = UILabel()
+        toast.text = message
+        toast.font = Theme.Fonts.regular(14)
+        toast.textColor = .white
+        toast.backgroundColor = UIColor.black.withAlphaComponent(0.7)
+        toast.textAlignment = .center
+        toast.layer.cornerRadius = 8
+        toast.layer.masksToBounds = true
+        toast.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(toast)
+        NSLayoutConstraint.activate([
+            toast.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            toast.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -80),
+            toast.widthAnchor.constraint(greaterThanOrEqualToConstant: 100),
+            toast.heightAnchor.constraint(equalToConstant: 36)
+        ])
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            toast.removeFromSuperview()
         }
     }
 

@@ -144,13 +144,59 @@ final class MockDataManager {
         }
     }()
 
-    /// 按分类筛选语音房（Popular 按热度排前10）
+    // MARK: - 用户创建/最小化房间
+
+    private var userCreatedRooms: [VoiceRoom] = []
+    private var minimizedRoom: VoiceRoom?
+    private var minimizedRoomIsOwner = false
+
+    /// 按分类筛选语音房（Popular 按热度排前10，用户创建房间排前面）
     func getRooms(for category: String) -> [VoiceRoom] {
+        let allRooms = userCreatedRooms + voiceRooms
         if category == "Popular" {
-            return voiceRooms.sorted { $0.hotValue > $1.hotValue }
-                .prefix(10).map { $0 }
+            let createdIds = Set(userCreatedRooms.map { $0.roomId })
+            let sortedMockRooms = voiceRooms.sorted { $0.hotValue > $1.hotValue }
+                .prefix(10)
+                .filter { !createdIds.contains($0.roomId) }
+            return userCreatedRooms + sortedMockRooms
         }
-        return voiceRooms.filter { $0.gameTag == category }
+        return allRooms.filter { $0.gameTag == category }
+    }
+
+    func addUserCreatedRoom(_ room: VoiceRoom) {
+        userCreatedRooms.removeAll { $0.roomId == room.roomId }
+        userCreatedRooms.insert(room, at: 0)
+    }
+
+    func removeUserCreatedRoom(roomId: String) {
+        userCreatedRooms.removeAll { $0.roomId == roomId }
+        if minimizedRoom?.roomId == roomId {
+            clearMinimizedRoom()
+        }
+    }
+
+    func setRoomCollected(roomId: String, isCollected: Bool) {
+        if let index = userCreatedRooms.firstIndex(where: { $0.roomId == roomId }) {
+            userCreatedRooms[index].isCollected = isCollected
+        }
+        if let index = voiceRooms.firstIndex(where: { $0.roomId == roomId }) {
+            voiceRooms[index].isCollected = isCollected
+        }
+    }
+
+    func saveMinimizedRoom(_ room: VoiceRoom, isOwner: Bool) {
+        minimizedRoom = room
+        minimizedRoomIsOwner = isOwner
+    }
+
+    func clearMinimizedRoom() {
+        minimizedRoom = nil
+        minimizedRoomIsOwner = false
+    }
+
+    func getMinimizedRoom() -> (room: VoiceRoom, isOwner: Bool)? {
+        guard let room = minimizedRoom else { return nil }
+        return (room, minimizedRoomIsOwner)
     }
 
     // MARK: - 论坛帖子数据

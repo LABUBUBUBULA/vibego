@@ -13,8 +13,39 @@ class CreateRoomViewController: UIViewController {
     private let gameTags = ["PUBG", "Minecraft", "Fortnite", "TheSims"]
     /// 标签按钮数组
     private var tagButtons: [UIButton] = []
+    private var selectedCoverImageName: String?
 
     // MARK: - UI 组件
+
+    private let coverContainer: UIView = {
+        let v = UIView()
+        v.backgroundColor = Theme.Colors.cardBackground
+        v.layer.cornerRadius = 36
+        v.layer.borderWidth = 1
+        v.layer.borderColor = Theme.Colors.primaryYellow.withAlphaComponent(0.4).cgColor
+        v.translatesAutoresizingMaskIntoConstraints = false
+        return v
+    }()
+
+    private let coverImageView: UIImageView = {
+        let iv = UIImageView()
+        iv.contentMode = .scaleAspectFill
+        iv.layer.cornerRadius = 32
+        iv.layer.masksToBounds = true
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        return iv
+    }()
+
+    private let addCoverLabel: UILabel = {
+        let label = UILabel()
+        label.text = "+"
+        label.font = Theme.Fonts.bold(28)
+        label.textColor = Theme.Colors.primaryYellow
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
 
     /// 房间名称输入框
     private let roomNameField: UITextField = {
@@ -120,6 +151,9 @@ class CreateRoomViewController: UIViewController {
             style: .plain, target: self, action: #selector(backTapped)
         )
 
+        view.addSubview(coverContainer)
+        coverContainer.addSubview(coverImageView)
+        coverContainer.addSubview(addCoverLabel)
         view.addSubview(roomNameField)
         view.addSubview(roomPasswordField)
         view.addSubview(tagTitleLabel)
@@ -129,8 +163,21 @@ class CreateRoomViewController: UIViewController {
         view.addSubview(createButton)
 
         NSLayoutConstraint.activate([
+            coverContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
+            coverContainer.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            coverContainer.widthAnchor.constraint(equalToConstant: 72),
+            coverContainer.heightAnchor.constraint(equalToConstant: 72),
+
+            coverImageView.centerXAnchor.constraint(equalTo: coverContainer.centerXAnchor),
+            coverImageView.centerYAnchor.constraint(equalTo: coverContainer.centerYAnchor),
+            coverImageView.widthAnchor.constraint(equalToConstant: 64),
+            coverImageView.heightAnchor.constraint(equalToConstant: 64),
+
+            addCoverLabel.centerXAnchor.constraint(equalTo: coverContainer.centerXAnchor),
+            addCoverLabel.centerYAnchor.constraint(equalTo: coverContainer.centerYAnchor),
+
             // 房间名
-            roomNameField.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
+            roomNameField.topAnchor.constraint(equalTo: coverContainer.bottomAnchor, constant: 24),
             roomNameField.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
             roomNameField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
             roomNameField.heightAnchor.constraint(equalToConstant: 48),
@@ -188,6 +235,7 @@ class CreateRoomViewController: UIViewController {
 
     private func setupActions() {
         createButton.addTarget(self, action: #selector(createTapped), for: .touchUpInside)
+        coverContainer.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(coverTapped)))
         roomProfileField.delegate = self
     }
 
@@ -199,6 +247,13 @@ class CreateRoomViewController: UIViewController {
     @objc private func tagTapped(_ sender: UIButton) {
         selectedTag = gameTags[sender.tag]
         updateTagUI()
+    }
+
+    @objc private func coverTapped() {
+        let imageName = "ph_\(selectedTag.lowercased())"
+        selectedCoverImageName = imageName
+        coverImageView.image = UIImage(named: imageName)
+        addCoverLabel.isHidden = true
     }
 
     /// 更新标签选中状态 UI
@@ -224,6 +279,11 @@ class CreateRoomViewController: UIViewController {
             return
         }
 
+        guard let coverImageName = selectedCoverImageName else {
+            showToast("Please select a cover image")
+            return
+        }
+
         // 生成6位房间ID（对应 Android 100000-999999 随机）
         let roomId = "\(Int.random(in: 100000...999999))"
         let user = UserManager.shared.currentUser ?? MockDataManager.shared.users[0]
@@ -233,7 +293,7 @@ class CreateRoomViewController: UIViewController {
         let room = VoiceRoom(
             roomId: roomId,
             title: roomName,
-            coverImage: "ph_\(selectedTag.lowercased())",
+            coverImage: coverImageName,
             coverUri: nil,
             gameTag: selectedTag,
             description: profileText.isEmpty ? "Welcome to \(roomName)!" : profileText,
@@ -246,6 +306,8 @@ class CreateRoomViewController: UIViewController {
             memberCount: 1,
             hotValue: 0
         )
+
+        MockDataManager.shared.addUserCreatedRoom(room)
 
         // 跳转到语音房（对应 Android → VoiceRoomActivity with is_owner=true）
         let vc = VoiceRoomViewController()
