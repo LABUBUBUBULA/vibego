@@ -8,7 +8,16 @@ final class UserManager {
 
     static let shared = UserManager()
     private init() {
+        loadRegisteredData()
         loadLocalState()
+    }
+
+    private enum Keys {
+        static let isLoggedIn = "isLoggedIn"
+        static let currentUserEmail = "currentUserEmail"
+        static let currentUserData = "currentUserData"
+        static let registeredEmails = "registeredEmails"
+        static let registeredProfiles = "registeredProfiles"
     }
 
     // MARK: - 登录状态
@@ -19,9 +28,18 @@ final class UserManager {
     /// 当前登录用户（登录后才有值）
     private(set) var currentUser: User?
 
+    /// 当前登录账号邮箱（注册用户用）
+    private var currentUserEmail: String?
+
     // MARK: - 已注册邮箱列表（Mock 数据，模拟服务端存储）
 
     private var registeredEmails: [String: String] = [:] // email -> password
+    private var registeredProfiles: [String: User] = [:] // email -> profile
+
+    /// 预设登录账号：用于展示完整 Mock 用户资料、头像、粉丝、聊天等
+    private let presetAccounts: [String: (password: String, userIndex: Int)] = [
+        "playtalk@gmail.com": ("123456789", 0)
+    ]
 
     // MARK: - 快速注册（对应 Android UserManager.quickRegister）
 
@@ -37,13 +55,14 @@ final class UserManager {
             avatarUri: nil,
             bio: "",
             gender: "male",
-            countryFlag: "flag_usa",
+            countryFlag: "",
             level: 1,
             backgroundImage: "bg_mine",
             isFollowing: false,
             interests: ""
         )
         currentUser = newUser
+        currentUserEmail = nil
         isLoggedIn = true
         saveLocalState()
         return newUser
@@ -57,19 +76,26 @@ final class UserManager {
     ///   - password: 密码（至少6位）
     /// - Returns: 注册成功返回用户ID，失败返回nil
     func registerWithEmail(_ email: String, _ password: String) -> Int? {
-        // 检查邮箱是否已注册
-        if registeredEmails[email] != nil {
+        let normalizedEmail = email.lowercased()
+        if registeredEmails[normalizedEmail] != nil {
             return nil
         }
-        // 保存注册信息
-        registeredEmails[email] = password
-        let userId = Int.random(in: 10000...99999)
-        return userId
+
+        registeredEmails[normalizedEmail] = password
+        let newUser = makeRegisteredUser(email: normalizedEmail)
+        registeredProfiles[normalizedEmail] = newUser
+        currentUser = newUser
+        currentUserEmail = normalizedEmail
+        isLoggedIn = true
+        saveRegisteredData()
+        saveLocalState()
+        return newUser.id
     }
 
     /// 检查邮箱是否已注册
     func isEmailRegistered(_ email: String) -> Bool {
-        return registeredEmails[email] != nil
+        let normalizedEmail = email.lowercased()
+        return registeredEmails[normalizedEmail] != nil || presetAccounts[normalizedEmail] != nil
     }
 
     // MARK: - 邮箱登录（对应 Android UserManager.loginWithEmail）
@@ -80,26 +106,30 @@ final class UserManager {
     ///   - password: 密码
     /// - Returns: 登录成功返回true
     func loginWithEmail(_ email: String, _ password: String) -> Bool {
-        // Mock: 任意邮箱密码都能登录
-        if let storedPassword = registeredEmails[email] {
-            if storedPassword != password {
-                return false
-            }
+        let normalizedEmail = email.lowercased()
+        if let preset = presetAccounts[normalizedEmail] {
+            guard preset.password == password else { return false }
+            currentUser = MockDataManager.shared.users[preset.userIndex]
+            currentUserEmail = nil
+            isLoggedIn = true
+            saveLocalState()
+            return true
         }
-        let mockUser = MockDataManager.shared.users[0]
-        currentUser = User(
-            id: mockUser.id,
-            name: mockUser.name,
-            avatarImage: mockUser.avatarImage,
-            avatarUri: nil,
-            bio: mockUser.bio,
-            gender: mockUser.gender,
-            countryFlag: mockUser.countryFlag,
-            level: mockUser.level,
-            backgroundImage: mockUser.backgroundImage,
-            isFollowing: false,
-            interests: mockUser.interests
-        )
+
+        guard let storedPassword = registeredEmails[normalizedEmail], storedPassword == password else {
+            return false
+        }
+
+        if let profile = registeredProfiles[normalizedEmail] {
+            currentUser = profile
+        } else {
+            let profile = makeRegisteredUser(email: normalizedEmail)
+            registeredProfiles[normalizedEmail] = profile
+            currentUser = profile
+            saveRegisteredData()
+        }
+
+        currentUserEmail = normalizedEmail
         isLoggedIn = true
         saveLocalState()
         return true
@@ -113,10 +143,12 @@ final class UserManager {
     ///   - newPassword: 新密码
     /// - Returns: 重置成功返回true
     func resetPassword(_ email: String, _ newPassword: String) -> Bool {
-        guard registeredEmails[email] != nil else {
+        let normalizedEmail = email.lowercased()
+        guard registeredEmails[normalizedEmail] != nil else {
             return false
         }
-        registeredEmails[email] = newPassword
+        registeredEmails[normalizedEmail] = newPassword
+        saveRegisteredData()
         return true
     }
 
@@ -129,14 +161,24 @@ final class UserManager {
         avatarUri: String?,
         country: String,
         countryFlag: String,
-        interests: String
+        interests: String,
+        bio: String? = nil
     ) {
-        currentUser?.name = nickname
-        currentUser?.gender = gender
-        currentUser?.avatarUri = avatarUri
-        currentUser?.countryFlag = countryFlag
-        currentUser?.interests = interests
+        var user = currentUser ?? makeRegisteredUser(email: currentUserEmail ?? "")
+        user.name = nickname
+        user.gender = gender
+        user.avatarUri = avatarUri
+        user.countryFlag = countryFlag
+        user.interests = interests
+        if let bio = bio {
+            user.bio = bio
+        }
+        currentUser = user
         isLoggedIn = true
+        if let email = currentUserEmail {
+            registeredProfiles[email] = user
+            saveRegisteredData()
+        }
         saveLocalState()
     }
 
@@ -145,38 +187,83 @@ final class UserManager {
     /// 退出登录，清除用户数据
     func logout() {
         currentUser = nil
+        currentUserEmail = nil
         isLoggedIn = false
-        UserDefaults.standard.removeObject(forKey: "isLoggedIn")
-        UserDefaults.standard.removeObject(forKey: "userName")
+        UserDefaults.standard.removeObject(forKey: Keys.isLoggedIn)
+        UserDefaults.standard.removeObject(forKey: Keys.currentUserEmail)
+        UserDefaults.standard.removeObject(forKey: Keys.currentUserData)
     }
 
     // MARK: - 本地状态持久化
 
     /// 保存登录状态到 UserDefaults
     private func saveLocalState() {
-        UserDefaults.standard.set(isLoggedIn, forKey: "isLoggedIn")
-        UserDefaults.standard.set(currentUser?.name, forKey: "userName")
+        UserDefaults.standard.set(isLoggedIn, forKey: Keys.isLoggedIn)
+        UserDefaults.standard.set(currentUserEmail, forKey: Keys.currentUserEmail)
+        if let user = currentUser,
+           let data = try? JSONEncoder().encode(user) {
+            UserDefaults.standard.set(data, forKey: Keys.currentUserData)
+        } else {
+            UserDefaults.standard.removeObject(forKey: Keys.currentUserData)
+        }
+    }
+
+    private func saveRegisteredData() {
+        if let emailsData = try? JSONEncoder().encode(registeredEmails) {
+            UserDefaults.standard.set(emailsData, forKey: Keys.registeredEmails)
+        }
+        if let profilesData = try? JSONEncoder().encode(registeredProfiles) {
+            UserDefaults.standard.set(profilesData, forKey: Keys.registeredProfiles)
+        }
+    }
+
+    private func loadRegisteredData() {
+        if let emailsData = UserDefaults.standard.data(forKey: Keys.registeredEmails),
+           let emails = try? JSONDecoder().decode([String: String].self, from: emailsData) {
+            registeredEmails = emails
+        }
+        if let profilesData = UserDefaults.standard.data(forKey: Keys.registeredProfiles),
+           let profiles = try? JSONDecoder().decode([String: User].self, from: profilesData) {
+            registeredProfiles = profiles
+        }
     }
 
     /// 从 UserDefaults 恢复登录状态
     private func loadLocalState() {
-        isLoggedIn = UserDefaults.standard.bool(forKey: "isLoggedIn")
-        if isLoggedIn {
-            let mockUser = MockDataManager.shared.users[0]
-            let savedName = UserDefaults.standard.string(forKey: "userName") ?? mockUser.name
-            currentUser = User(
-                id: mockUser.id,
-                name: savedName,
-                avatarImage: mockUser.avatarImage,
-                avatarUri: nil,
-                bio: mockUser.bio,
-                gender: mockUser.gender,
-                countryFlag: mockUser.countryFlag,
-                level: mockUser.level,
-                backgroundImage: mockUser.backgroundImage,
-                isFollowing: false,
-                interests: mockUser.interests
-            )
+        isLoggedIn = UserDefaults.standard.bool(forKey: Keys.isLoggedIn)
+        currentUserEmail = UserDefaults.standard.string(forKey: Keys.currentUserEmail)
+
+        if let data = UserDefaults.standard.data(forKey: Keys.currentUserData),
+           let savedUser = try? JSONDecoder().decode(User.self, from: data) {
+            currentUser = savedUser
+            return
         }
+
+        if isLoggedIn, let email = currentUserEmail, let savedProfile = registeredProfiles[email] {
+            currentUser = savedProfile
+            return
+        }
+
+        if isLoggedIn {
+            currentUser = MockDataManager.shared.users[0]
+        }
+    }
+
+    private func makeRegisteredUser(email: String) -> User {
+        let mockUser = MockDataManager.shared.users[0]
+        let namePart = email.split(separator: "@").first.map(String.init) ?? "User"
+        return User(
+            id: Int.random(in: 10000...99999),
+            name: namePart,
+            avatarImage: mockUser.avatarImage,
+            avatarUri: nil,
+            bio: "",
+            gender: "male",
+            countryFlag: "",
+            level: 1,
+            backgroundImage: "bg_mine",
+            isFollowing: false,
+            interests: ""
+        )
     }
 }

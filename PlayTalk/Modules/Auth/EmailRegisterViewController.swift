@@ -97,10 +97,7 @@ class EmailRegisterViewController: UIViewController {
     // MARK: - 界面搭建
 
     private func setupUI() {
-        navigationItem.leftBarButtonItem = UIBarButtonItem(
-            image: UIImage(named: "ic_back")?.withRenderingMode(.alwaysTemplate),
-            style: .plain, target: self, action: #selector(backTapped)
-        )
+        navigationItem.leftBarButtonItem = makeAppBackButton(action: #selector(backTapped))
 
         view.addSubview(emailField)
         view.addSubview(emailErrorLabel)

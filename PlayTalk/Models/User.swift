@@ -2,7 +2,7 @@ import UIKit
 
 /// 用户模型 - 对应 Android GameMic 的 User.java
 /// 包含用户基本信息、社交属性、等级等
-struct User {
+struct User: Codable {
     let id: Int                     // 用户 ID（5位数字，如 54782）
     var name: String                // 昵称
     var avatarImage: String         // 头像图片名（如 "avatar_1"）

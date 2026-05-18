@@ -239,36 +239,22 @@ class HomeViewController: UIViewController {
         updateMinimizedRoomFloat()
     }
 
-    private func openRoom(_ room: VoiceRoom, isOwner: Bool) {
+    private func openRoom(_ room: VoiceRoom, isOwner: Bool? = nil) {
         // 记录浏览历史，对应 Android BrowseHistoryManager.addBrowseHistory
         MockDataManager.shared.addBrowseHistory(room)
         let vc = VoiceRoomViewController()
         vc.room = room
-        vc.isOwner = isOwner
+        // 自动检测是否为房主：只认当前用户创建的房间，避免预设用户误认系统 Mock 房
+        if let override = isOwner {
+            vc.isOwner = override
+        } else if let currentUser = UserManager.shared.currentUser {
+            vc.isOwner = MockDataManager.shared.isUserCreatedRoom(room)
+                && room.hostName == currentUser.name
+                && room.hostAvatarImage == currentUser.avatarImage
+        }
         pushAppViewController(vc, animated: true)
     }
 
-    private func showToast(_ message: String) {
-        let toast = UILabel()
-        toast.text = message
-        toast.font = Theme.Fonts.regular(14)
-        toast.textColor = .white
-        toast.backgroundColor = UIColor.black.withAlphaComponent(0.7)
-        toast.textAlignment = .center
-        toast.layer.cornerRadius = 8
-        toast.layer.masksToBounds = true
-        toast.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(toast)
-        NSLayoutConstraint.activate([
-            toast.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            toast.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -80),
-            toast.widthAnchor.constraint(greaterThanOrEqualToConstant: 100),
-            toast.heightAnchor.constraint(equalToConstant: 36)
-        ])
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            toast.removeFromSuperview()
-        }
-    }
 }
 
 // MARK: - 分类 CollectionView 数据源和代理
@@ -314,6 +300,6 @@ extension HomeViewController: UITableViewDataSource, UITableViewDelegate {
     /// 点击进入语音房（对应 Android 的 VoiceRoomActivity 跳转）
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        openRoom(rooms[indexPath.row], isOwner: false)
+        openRoom(rooms[indexPath.row])
     }
 }

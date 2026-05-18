@@ -119,12 +119,7 @@ class EmailSignInViewController: UIViewController {
 
     private func setupUI() {
         // 返回按钮样式
-        navigationItem.leftBarButtonItem = UIBarButtonItem(
-            image: UIImage(named: "ic_back")?.withRenderingMode(.alwaysTemplate),
-            style: .plain,
-            target: self,
-            action: #selector(backTapped)
-        )
+        navigationItem.leftBarButtonItem = makeAppBackButton(action: #selector(backTapped))
 
         view.addSubview(emailField)
         view.addSubview(emailErrorLabel)

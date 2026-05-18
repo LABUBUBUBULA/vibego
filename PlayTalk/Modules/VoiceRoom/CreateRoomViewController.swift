@@ -146,10 +146,7 @@ class CreateRoomViewController: UIViewController {
     // MARK: - 界面搭建
 
     private func setupUI() {
-        navigationItem.leftBarButtonItem = UIBarButtonItem(
-            image: UIImage(named: "ic_back")?.withRenderingMode(.alwaysTemplate),
-            style: .plain, target: self, action: #selector(backTapped)
-        )
+        navigationItem.leftBarButtonItem = makeAppBackButton(action: #selector(backTapped))
 
         view.addSubview(coverContainer)
         coverContainer.addSubview(coverImageView)
@@ -247,9 +244,16 @@ class CreateRoomViewController: UIViewController {
     @objc private func tagTapped(_ sender: UIButton) {
         selectedTag = gameTags[sender.tag]
         updateTagUI()
+        if selectedCoverImageName != nil {
+            updateCoverForSelectedTag()
+        }
     }
 
     @objc private func coverTapped() {
+        updateCoverForSelectedTag()
+    }
+
+    private func updateCoverForSelectedTag() {
         let imageName = "ph_\(selectedTag.lowercased())"
         selectedCoverImageName = imageName
         coverImageView.image = UIImage(named: imageName)
@@ -301,8 +305,8 @@ class CreateRoomViewController: UIViewController {
             isCollected: false,
             hostName: user.name,
             hostAvatarImage: user.avatarImage,
-            hostCountry: "US",
-            hostCountryFlag: user.countryFlag,
+            hostCountry: "",
+            hostCountryFlag: "",
             memberCount: 1,
             hotValue: 0
         )
@@ -316,29 +320,6 @@ class CreateRoomViewController: UIViewController {
         pushAppViewController(vc, animated: true)
     }
 
-    // MARK: - Toast
-
-    private func showToast(_ message: String) {
-        let toast = UILabel()
-        toast.text = message
-        toast.font = Theme.Fonts.regular(14)
-        toast.textColor = .white
-        toast.backgroundColor = UIColor.black.withAlphaComponent(0.7)
-        toast.textAlignment = .center
-        toast.layer.cornerRadius = 8
-        toast.layer.masksToBounds = true
-        toast.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(toast)
-        NSLayoutConstraint.activate([
-            toast.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            toast.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -80),
-            toast.widthAnchor.constraint(greaterThanOrEqualToConstant: 100),
-            toast.heightAnchor.constraint(equalToConstant: 36)
-        ])
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            toast.removeFromSuperview()
-        }
-    }
 }
 
 // MARK: - UITextViewDelegate（简介占位文字显隐）

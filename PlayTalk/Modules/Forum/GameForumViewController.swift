@@ -46,12 +46,14 @@ class GameForumViewController: UIViewController {
         view.backgroundColor = Theme.Colors.darkBackground
 
         // 右上角发帖按钮
-        navigationItem.rightBarButtonItem = UIBarButtonItem(
-            image: UIImage(named: "ic_publish") ?? UIImage(systemName: "square.and.pencil"),
-            style: .plain,
-            target: self,
-            action: #selector(createPostTapped)
-        )
+        let publishButton = UIButton(type: .system)
+        publishButton.setImage(UIImage(named: "ic_publish") ?? UIImage(systemName: "square.and.pencil"), for: .normal)
+        publishButton.tintColor = Theme.Colors.primaryYellow
+        publishButton.imageView?.contentMode = .scaleAspectFit
+        publishButton.contentEdgeInsets = UIEdgeInsets(top: 7, left: 7, bottom: 7, right: 7)
+        publishButton.frame = CGRect(x: 0, y: 0, width: 34, height: 34)
+        publishButton.addTarget(self, action: #selector(createPostTapped), for: .touchUpInside)
+        navigationItem.rightBarButtonItem = UIBarButtonItem(customView: publishButton)
 
         setupUI()
         loadPosts()
@@ -81,6 +83,7 @@ class GameForumViewController: UIViewController {
             "Pro player settings for \(gameName)"
         ]
 
+        let imagePrefix = gameName.lowercased()
         posts = (0..<8).map { i in
             let user = users[i % users.count]
             return Post(
@@ -92,7 +95,7 @@ class GameForumViewController: UIViewController {
                 time: "\(Int.random(in: 1...24))h ago",
                 title: titles[i],
                 content: "This is a detailed post about \(gameName)...",
-                images: [],
+                images: ["\(imagePrefix)_\((i % 6) + 1)"],
                 imageUris: [],
                 viewCount: Int.random(in: 100...50000),
                 commentCount: Int.random(in: 5...100),
@@ -125,7 +128,7 @@ extension GameForumViewController: UITableViewDataSource, UITableViewDelegate {
     }
 
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        return 88
+        return 112
     }
 
     /// 点击帖子进入详情
@@ -171,6 +174,17 @@ class PostCell: UITableViewCell {
         return label
     }()
 
+    /// 帖子缩略图
+    private let postImageView: UIImageView = {
+        let iv = UIImageView()
+        iv.contentMode = .scaleAspectFill
+        iv.layer.cornerRadius = 10
+        iv.layer.masksToBounds = true
+        iv.backgroundColor = Theme.Colors.separator
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        return iv
+    }()
+
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         backgroundColor = .clear
@@ -179,17 +193,25 @@ class PostCell: UITableViewCell {
         contentView.addSubview(titleLabel)
         contentView.addSubview(authorLabel)
         contentView.addSubview(statsLabel)
+        contentView.addSubview(postImageView)
 
         NSLayoutConstraint.activate([
+            postImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+            postImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            postImageView.widthAnchor.constraint(equalToConstant: 88),
+            postImageView.heightAnchor.constraint(equalToConstant: 88),
+
             titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
             titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            titleLabel.trailingAnchor.constraint(equalTo: postImageView.leadingAnchor, constant: -12),
 
-            authorLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 6),
+            authorLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
             authorLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            authorLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
 
-            statsLabel.topAnchor.constraint(equalTo: authorLabel.bottomAnchor, constant: 4),
-            statsLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor)
+            statsLabel.topAnchor.constraint(equalTo: authorLabel.bottomAnchor, constant: 6),
+            statsLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            statsLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor)
         ])
     }
 
@@ -201,5 +223,12 @@ class PostCell: UITableViewCell {
         titleLabel.text = post.title
         authorLabel.text = "\(post.authorName)  ·  \(post.time)"
         statsLabel.text = "👁 \(post.viewCountText)  💬 \(post.commentCount)  ❤️ \(post.likeCount)"
+        if let imageName = post.images.first, let image = UIImage(named: imageName) {
+            postImageView.image = image
+            postImageView.isHidden = false
+        } else {
+            postImageView.image = nil
+            postImageView.isHidden = true
+        }
     }
 }

@@ -2,10 +2,10 @@ import UIKit
 
 /// 房间消息模型 - 对应 Android GameMic 的 RoomMessage.java
 /// 支持 4 种消息类型：欢迎、礼物、评论、公告
-struct RoomMessage {
+struct RoomMessage: Codable {
 
     /// 消息类型枚举（对应 Android TYPE_WELCOME/GIFT/COMMENT/ANNOUNCEMENT）
-    enum MessageType {
+    enum MessageType: String, Codable {
         case welcome        // 用户进入房间
         case gift           // 礼物赠送通知
         case comment        // 用户聊天消息

@@ -110,10 +110,7 @@ class CompleteProfileViewController: UIViewController {
     // MARK: - 界面搭建
 
     private func setupUI() {
-        navigationItem.leftBarButtonItem = UIBarButtonItem(
-            image: UIImage(named: "ic_back")?.withRenderingMode(.alwaysTemplate),
-            style: .plain, target: self, action: #selector(backTapped)
-        )
+        navigationItem.leftBarButtonItem = makeAppBackButton(action: #selector(backTapped))
 
         view.addSubview(avatarView)
         avatarView.addSubview(avatarPlaceholder)
@@ -218,32 +215,4 @@ class CompleteProfileViewController: UIViewController {
         navigationController?.pushViewController(vc, animated: true)
     }
 
-    // MARK: - Toast
-
-    private func showToast(_ message: String) {
-        let toast = UILabel()
-        toast.text = message
-        toast.font = Theme.Fonts.regular(14)
-        toast.textColor = .white
-        toast.backgroundColor = UIColor.black.withAlphaComponent(0.7)
-        toast.textAlignment = .center
-        toast.layer.cornerRadius = 8
-        toast.layer.masksToBounds = true
-        toast.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(toast)
-
-        NSLayoutConstraint.activate([
-            toast.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            toast.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -80),
-            toast.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 40),
-            toast.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -40),
-            toast.heightAnchor.constraint(greaterThanOrEqualToConstant: 36)
-        ])
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            UIView.animate(withDuration: 0.3, animations: { toast.alpha = 0 }) { _ in
-                toast.removeFromSuperview()
-            }
-        }
-    }
 }

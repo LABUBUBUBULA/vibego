@@ -2,7 +2,7 @@ import UIKit
 
 /// 礼物模型 - 对应 Android GameMic 的 Gift.java
 /// 用于语音房内的礼物赠送功能
-struct Gift {
+struct Gift: Codable {
     let id: Int             // 礼物 ID（1-20）
     let name: String        // 礼物名称（如 "Flower", "Diamond"）
     let price: Int          // 价格（88-5888 金币）

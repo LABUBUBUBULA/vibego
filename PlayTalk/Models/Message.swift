@@ -2,7 +2,7 @@ import UIKit
 
 /// 消息模型 - 对应 Android GameMic 的 Message.java
 /// 用于消息列表展示私聊记录
-struct Message {
+struct Message: Codable {
     let userId: Int                 // 对方用户 ID
     var avatarImage: String         // 对方头像
     var name: String                // 对方昵称

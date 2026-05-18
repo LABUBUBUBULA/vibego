@@ -2,7 +2,7 @@ import UIKit
 
 /// 语音房模型 - 对应 Android GameMic 的 GameDiscussion.java
 /// 包含房间信息、房主信息、热度等
-struct VoiceRoom {
+struct VoiceRoom: Codable {
     let roomId: String              // 房间 ID
     var title: String               // 房间标题
     var coverImage: String          // 封面图片名

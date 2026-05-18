@@ -1,15 +1,11 @@
 import UIKit
 
-/// 个人中心页 - 对应 Android GameMic 的 MineFragment
-/// 布局（ScrollView）：背景图 → 头像+昵称+ID → 粉丝/关注/好友 → 余额/等级卡片 → 菜单列表 → 退出按钮
 class MineViewController: UIViewController {
 
-    // MARK: - 数据
-
-    private let user = MockDataManager.shared.currentUser
+    private var user: User {
+        UserManager.shared.currentUser ?? MockDataManager.shared.users[0]
+    }
     private let mockData = MockDataManager.shared
-
-    // MARK: - UI 组件
 
     private lazy var scrollView: UIScrollView = {
         let sv = UIScrollView()
@@ -25,20 +21,39 @@ class MineViewController: UIViewController {
         return v
     }()
 
-    // MARK: - 生命周期
-
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Mine"
-        view.backgroundColor = Theme.Colors.darkBackground
-        setupUI()
+        view.backgroundColor = Theme.Colors.darkerBackground
     }
 
-    // MARK: - 界面搭建
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        rebuildUI()
+    }
+
+    private func rebuildUI() {
+        view.subviews.forEach { $0.removeFromSuperview() }
+        scrollView.subviews.forEach { $0.removeFromSuperview() }
+        contentView.subviews.forEach { $0.removeFromSuperview() }
+        setupUI()
+    }
 
     private func setupUI() {
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
+
+        let header = createHeader()
+        let statsView = createStatsView()
+        let cardsView = createCardsView()
+        let menuStack = createMenuList()
+        let logoutButton = createLogoutButton()
+
+        contentView.addSubview(header)
+        contentView.addSubview(statsView)
+        contentView.addSubview(cardsView)
+        contentView.addSubview(menuStack)
+        contentView.addSubview(logoutButton)
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -50,194 +65,219 @@ class MineViewController: UIViewController {
             contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
             contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+
+            header.topAnchor.constraint(equalTo: contentView.topAnchor),
+            header.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            header.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            header.heightAnchor.constraint(equalToConstant: 210),
+
+            statsView.topAnchor.constraint(equalTo: header.bottomAnchor, constant: 14),
+            statsView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
+            statsView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            statsView.heightAnchor.constraint(equalToConstant: 64),
+
+            cardsView.topAnchor.constraint(equalTo: statsView.bottomAnchor, constant: 16),
+            cardsView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
+            cardsView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+            cardsView.heightAnchor.constraint(equalToConstant: 66),
+
+            menuStack.topAnchor.constraint(equalTo: cardsView.bottomAnchor, constant: 28),
+            menuStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
+            menuStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
+
+            logoutButton.topAnchor.constraint(equalTo: menuStack.bottomAnchor, constant: 32),
+            logoutButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 32),
+            logoutButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -32),
+            logoutButton.heightAnchor.constraint(equalToConstant: 64),
+            logoutButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -48)
         ])
+    }
 
-        // 1. 背景区域（320dp，对应 Android）
-        let headerBg = UIView()
-        headerBg.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.1)
-        headerBg.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(headerBg)
+    private func createHeader() -> UIView {
+        let header = UIView()
+        header.translatesAutoresizingMaskIntoConstraints = false
+        header.clipsToBounds = true
 
-        // 2. 头像（90x90dp 圆形，对应 Android CardView）
-        let avatarView = createAvatarView()
-        contentView.addSubview(avatarView)
+        let bg = UIImageView(image: UIImage(named: user.backgroundImage) ?? UIImage(named: "bg_mine"))
+        bg.contentMode = .scaleAspectFill
+        bg.alpha = 0.42
+        bg.translatesAutoresizingMaskIntoConstraints = false
+        header.addSubview(bg)
 
-        // 3. 昵称（24sp bold）
+        let dim = UIView()
+        dim.backgroundColor = Theme.Colors.darkerBackground.withAlphaComponent(0.42)
+        dim.translatesAutoresizingMaskIntoConstraints = false
+        header.addSubview(dim)
+
+        let avatar = UIImageView(image: UIImage(named: user.avatarImage))
+        avatar.contentMode = .scaleAspectFill
+        avatar.layer.cornerRadius = 31
+        avatar.layer.masksToBounds = true
+        avatar.translatesAutoresizingMaskIntoConstraints = false
+        header.addSubview(avatar)
+
         let nameLabel = UILabel()
         nameLabel.text = user.name
         nameLabel.font = Theme.Fonts.bold(24)
-        nameLabel.textColor = Theme.Colors.textPrimary
+        nameLabel.textColor = .white
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(nameLabel)
+        header.addSubview(nameLabel)
 
-        // 4. 用户 ID（14sp gray）
         let idLabel = UILabel()
-        idLabel.text = "ID: \(user.id)"
-        idLabel.font = Theme.Fonts.regular(14)
+        idLabel.text = "ID:\(user.id)"
+        idLabel.font = Theme.Fonts.regular(13)
         idLabel.textColor = Theme.Colors.textSecondary
         idLabel.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(idLabel)
+        header.addSubview(idLabel)
 
-        // 5. 兴趣标签
-        let interestStack = createInterestTags()
-        contentView.addSubview(interestStack)
+        let badgesStack = UIStackView()
+        badgesStack.axis = .horizontal
+        badgesStack.alignment = .center
+        badgesStack.spacing = 10
+        badgesStack.translatesAutoresizingMaskIntoConstraints = false
+        header.addSubview(badgesStack)
 
-        // 6. 粉丝/关注/好友统计（3列，对应 Android 3列点击跳转）
-        let statsView = createStatsView()
-        contentView.addSubview(statsView)
+        let level = makeLevelIcon(level: user.level)
+        badgesStack.addArrangedSubview(level)
 
-        // 7. 余额和等级卡片（2列）
-        let cardsView = createCardsView()
-        contentView.addSubview(cardsView)
+        let game = makeGamePill(text: user.interests.split(separator: ",").first.map(String.init) ?? "PUBG")
+        badgesStack.addArrangedSubview(game)
 
-        // 8. 菜单列表（4项，对应 Android 的 Collection/Browse/Customer/Settings）
-        let menuView = createMenuList()
-        contentView.addSubview(menuView)
+        let edit = UIButton(type: .system)
+        edit.setImage(UIImage(named: "ic_edit") ?? UIImage(systemName: "pencil"), for: .normal)
+        edit.tintColor = .white
+        edit.translatesAutoresizingMaskIntoConstraints = false
+        edit.addTarget(self, action: #selector(editProfileTapped), for: .touchUpInside)
+        header.addSubview(edit)
 
-        // 9. 退出按钮
-        let logoutButton = createLogoutButton()
-        contentView.addSubview(logoutButton)
+        let homepageWrap = UIView()
+        homepageWrap.backgroundColor = .clear
+        homepageWrap.translatesAutoresizingMaskIntoConstraints = false
+        header.addSubview(homepageWrap)
+
+        let homepage = UIButton(type: .system)
+        homepage.setTitle("Homepage ›", for: .normal)
+        homepage.setTitleColor(.white, for: .normal)
+        homepage.titleLabel?.font = Theme.Fonts.bold(12)
+        homepage.backgroundColor = UIColor.white.withAlphaComponent(0.08)
+        homepage.layer.cornerRadius = 12
+        homepage.contentEdgeInsets = UIEdgeInsets(top: 0, left: 10, bottom: 0, right: 10)
+        homepage.translatesAutoresizingMaskIntoConstraints = false
+        homepage.addTarget(self, action: #selector(homepageTapped), for: .touchUpInside)
+        homepageWrap.addSubview(homepage)
 
         NSLayoutConstraint.activate([
-            headerBg.topAnchor.constraint(equalTo: contentView.topAnchor),
-            headerBg.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            headerBg.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            headerBg.heightAnchor.constraint(equalToConstant: 200),
+            bg.topAnchor.constraint(equalTo: header.topAnchor),
+            bg.leadingAnchor.constraint(equalTo: header.leadingAnchor),
+            bg.trailingAnchor.constraint(equalTo: header.trailingAnchor),
+            bg.bottomAnchor.constraint(equalTo: header.bottomAnchor),
 
-            avatarView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 80),
-            avatarView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            avatarView.widthAnchor.constraint(equalToConstant: 90),
-            avatarView.heightAnchor.constraint(equalToConstant: 90),
+            dim.topAnchor.constraint(equalTo: header.topAnchor),
+            dim.leadingAnchor.constraint(equalTo: header.leadingAnchor),
+            dim.trailingAnchor.constraint(equalTo: header.trailingAnchor),
+            dim.bottomAnchor.constraint(equalTo: header.bottomAnchor),
 
-            nameLabel.topAnchor.constraint(equalTo: avatarView.bottomAnchor, constant: 12),
-            nameLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            avatar.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: 22),
+            avatar.bottomAnchor.constraint(equalTo: header.bottomAnchor, constant: -32),
+            avatar.widthAnchor.constraint(equalToConstant: 62),
+            avatar.heightAnchor.constraint(equalToConstant: 62),
 
-            idLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 4),
-            idLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            nameLabel.leadingAnchor.constraint(equalTo: avatar.trailingAnchor, constant: 14),
+            nameLabel.topAnchor.constraint(equalTo: avatar.topAnchor, constant: 4),
+            nameLabel.trailingAnchor.constraint(lessThanOrEqualTo: edit.leadingAnchor, constant: -12),
 
-            interestStack.topAnchor.constraint(equalTo: idLabel.bottomAnchor, constant: 12),
-            interestStack.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            interestStack.heightAnchor.constraint(equalToConstant: 28),
+            idLabel.leadingAnchor.constraint(equalTo: nameLabel.leadingAnchor),
+            idLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 5),
 
-            statsView.topAnchor.constraint(equalTo: interestStack.bottomAnchor, constant: 24),
-            statsView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            statsView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            statsView.heightAnchor.constraint(equalToConstant: 60),
+            badgesStack.leadingAnchor.constraint(equalTo: nameLabel.leadingAnchor),
+            badgesStack.topAnchor.constraint(equalTo: idLabel.bottomAnchor, constant: 10),
+            badgesStack.trailingAnchor.constraint(lessThanOrEqualTo: homepageWrap.leadingAnchor, constant: -10),
+            badgesStack.heightAnchor.constraint(equalToConstant: 24),
 
-            cardsView.topAnchor.constraint(equalTo: statsView.bottomAnchor, constant: 16),
-            cardsView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            cardsView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            cardsView.heightAnchor.constraint(equalToConstant: 80),
+            level.widthAnchor.constraint(equalToConstant: 60),
+            level.heightAnchor.constraint(equalToConstant: 24),
+            game.widthAnchor.constraint(greaterThanOrEqualToConstant: 60),
+            game.heightAnchor.constraint(equalToConstant: 24),
 
-            menuView.topAnchor.constraint(equalTo: cardsView.bottomAnchor, constant: 16),
-            menuView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            menuView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            edit.trailingAnchor.constraint(equalTo: header.trailingAnchor, constant: -26),
+            edit.centerYAnchor.constraint(equalTo: nameLabel.centerYAnchor),
+            edit.widthAnchor.constraint(equalToConstant: 34),
+            edit.heightAnchor.constraint(equalToConstant: 34),
 
-            logoutButton.topAnchor.constraint(equalTo: menuView.bottomAnchor, constant: 24),
-            logoutButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            logoutButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            logoutButton.heightAnchor.constraint(equalToConstant: 50),
-            logoutButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -40)
+            homepageWrap.trailingAnchor.constraint(equalTo: header.trailingAnchor, constant: -18),
+            homepageWrap.centerYAnchor.constraint(equalTo: badgesStack.centerYAnchor),
+            homepageWrap.widthAnchor.constraint(equalToConstant: 92),
+            homepageWrap.heightAnchor.constraint(equalToConstant: 24),
+
+            homepage.topAnchor.constraint(equalTo: homepageWrap.topAnchor),
+            homepage.leadingAnchor.constraint(equalTo: homepageWrap.leadingAnchor),
+            homepage.trailingAnchor.constraint(equalTo: homepageWrap.trailingAnchor),
+            homepage.bottomAnchor.constraint(equalTo: homepageWrap.bottomAnchor)
         ])
+
+        return header
     }
 
-    // MARK: - 头像视图
-
-    /// 创建圆形头像（90x90dp，对应 Android 的 CardView 包裹）
-    private func createAvatarView() -> UIView {
-        let container = UIView()
-        container.translatesAutoresizingMaskIntoConstraints = false
-
-        let imageView = UIImageView()
-        imageView.image = UIImage(named: user.avatarImage)
-        imageView.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.3)
-        imageView.layer.cornerRadius = 45
-        imageView.layer.masksToBounds = true
-        imageView.layer.borderWidth = 3
-        imageView.layer.borderColor = Theme.Colors.primaryYellow.cgColor
-        imageView.contentMode = .scaleAspectFill
+    private func makeLevelIcon(level: Int) -> UIImageView {
+        let imageName = "bg_level_\(min(max(level, 1), 10))"
+        let imageView = UIImageView(image: UIImage(named: imageName) ?? UIImage(named: "level_badge"))
+        imageView.contentMode = .scaleAspectFit
         imageView.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(imageView)
+        return imageView
+    }
+
+    private func makeGamePill(text: String) -> UIView {
+        let view = GradientView(colors: [UIColor(hex: "#65C8FF"), UIColor(hex: "#4B78FF")])
+        view.layer.cornerRadius = 12
+        view.clipsToBounds = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+
+        let label = UILabel()
+        label.text = text
+        label.font = Theme.Fonts.bold(11)
+        label.textColor = .white
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(label)
 
         NSLayoutConstraint.activate([
-            imageView.topAnchor.constraint(equalTo: container.topAnchor),
-            imageView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            imageView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            imageView.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+            label.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
+            label.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
+            label.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
-        return container
+
+        return view
     }
 
-    // MARK: - 兴趣标签
-
-    /// 创建兴趣标签行（最多2个，对应 Android 的 interest tags）
-    private func createInterestTags() -> UIStackView {
-        let stack = UIStackView()
-        stack.axis = .horizontal
-        stack.spacing = 8
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        let interests = user.interests.split(separator: ",").prefix(2)
-        for interest in interests {
-            let tag = UILabel()
-            tag.text = "  \(interest)  "
-            tag.font = Theme.Fonts.medium(12)
-            tag.textColor = Theme.Colors.primaryYellow
-            tag.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.15)
-            tag.layer.cornerRadius = 10
-            tag.layer.masksToBounds = true
-            stack.addArrangedSubview(tag)
-        }
-        return stack
-    }
-
-    // MARK: - 统计视图
-
-    /// 创建粉丝/关注/好友统计（3列，对应 Android 的 3 个可点击列）
     private func createStatsView() -> UIView {
-        let container = UIView()
-        container.backgroundColor = Theme.Colors.cardBackground
-        container.layer.cornerRadius = Theme.Dimensions.cornerRadius
-        container.translatesAutoresizingMaskIntoConstraints = false
-
         let stack = UIStackView()
         stack.axis = .horizontal
         stack.distribution = .fillEqually
         stack.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(stack)
-
-        /// 格式化数字（如 487000 → "487K"）
-        func formatCount(_ count: Int) -> String {
-            if count >= 1000 {
-                return String(format: "%.0fK", Double(count) / 1000.0)
-            }
-            return "\(count)"
-        }
 
         let statsData: [(count: String, label: String)] = [
             (formatCount(mockData.fansCount), "Fans"),
-            (formatCount(mockData.followingCount), "Following"),
+            (formatCount(mockData.followingCount), "Follow"),
             (formatCount(mockData.friendsCount), "Friends")
         ]
 
         for (index, data) in statsData.enumerated() {
             let item = UIView()
             item.tag = index
-            let tap = UITapGestureRecognizer(target: self, action: #selector(statsTapped(_:)))
-            item.addGestureRecognizer(tap)
+            item.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(statsTapped(_:))))
             item.isUserInteractionEnabled = true
 
             let countLabel = UILabel()
             countLabel.text = data.count
-            countLabel.font = Theme.Fonts.bold(18)
-            countLabel.textColor = Theme.Colors.textPrimary
+            countLabel.font = Theme.Fonts.bold(27)
+            countLabel.textColor = .white
             countLabel.textAlignment = .center
             countLabel.translatesAutoresizingMaskIntoConstraints = false
 
             let titleLabel = UILabel()
             titleLabel.text = data.label
-            titleLabel.font = Theme.Fonts.regular(12)
+            titleLabel.font = Theme.Fonts.regular(14)
             titleLabel.textColor = Theme.Colors.textSecondary
             titleLabel.textAlignment = .center
             titleLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -247,44 +287,30 @@ class MineViewController: UIViewController {
 
             NSLayoutConstraint.activate([
                 countLabel.centerXAnchor.constraint(equalTo: item.centerXAnchor),
-                countLabel.topAnchor.constraint(equalTo: item.topAnchor, constant: 10),
+                countLabel.topAnchor.constraint(equalTo: item.topAnchor),
                 titleLabel.centerXAnchor.constraint(equalTo: item.centerXAnchor),
-                titleLabel.topAnchor.constraint(equalTo: countLabel.bottomAnchor, constant: 2)
+                titleLabel.topAnchor.constraint(equalTo: countLabel.bottomAnchor, constant: 8)
             ])
 
             stack.addArrangedSubview(item)
         }
 
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: container.topAnchor),
-            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            stack.bottomAnchor.constraint(equalTo: container.bottomAnchor)
-        ])
-
-        return container
+        return stack
     }
 
-    // MARK: - 余额和等级卡片
-
-    /// 创建余额/等级双卡片（对应 Android 的 Balance + Level 两列）
-    private func createCardsView() -> UIView {
+    private func createCardsView() -> UIStackView {
         let stack = UIStackView()
         stack.axis = .horizontal
-        stack.spacing = 12
+        stack.spacing = 16
         stack.distribution = .fillEqually
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        // 余额卡片（点击进入充值页）
-        let balanceCard = createInfoCard(title: "Balance", value: "\(mockData.coinBalance)", icon: "icon_coin")
-        let balanceTap = UITapGestureRecognizer(target: self, action: #selector(rechargeTapped))
-        balanceCard.addGestureRecognizer(balanceTap)
+        let balanceCard = createInfoCard(title: "Banlance", value: formatBalance(mockData.coinBalance), background: "bg_balance")
+        balanceCard.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(rechargeTapped)))
         balanceCard.isUserInteractionEnabled = true
 
-        // 等级卡片（点击进入等级页，对应 Android UserLevelActivity）
-        let levelCard = createInfoCard(title: "Level", value: "Lv.\(user.level)", icon: "level_badge")
-        let levelTap = UITapGestureRecognizer(target: self, action: #selector(levelTapped))
-        levelCard.addGestureRecognizer(levelTap)
+        let levelCard = createInfoCard(title: "Level", value: String(format: "%02d", user.level), background: "bg_level")
+        levelCard.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(levelTapped)))
         levelCard.isUserInteractionEnabled = true
 
         stack.addArrangedSubview(balanceCard)
@@ -292,116 +318,106 @@ class MineViewController: UIViewController {
         return stack
     }
 
-    /// 创建信息卡片（余额/等级）
-    private func createInfoCard(title: String, value: String, icon: String) -> UIView {
+    private func formatCount(_ count: Int) -> String {
+        if count >= 1_000_000 {
+            return String(format: "%.1fM", Double(count) / 1_000_000)
+        }
+        if count >= 10_000 {
+            return String(format: "%.1fK", Double(count) / 1_000)
+        }
+        return "\(count)"
+    }
+
+    private func formatBalance(_ balance: Int) -> String {
+        if balance >= 1_000_000 {
+            return String(format: "%.1fM", Double(balance) / 1_000_000)
+        }
+        if balance >= 10_000 {
+            return String(format: "%.1fK", Double(balance) / 1_000)
+        }
+        return "\(balance)"
+    }
+
+    private func createInfoCard(title: String, value: String, background: String) -> UIView {
         let card = UIView()
-        card.backgroundColor = Theme.Colors.cardBackground
-        card.layer.cornerRadius = Theme.Dimensions.cornerRadius
+        card.layer.cornerRadius = 12
+        card.clipsToBounds = true
         card.translatesAutoresizingMaskIntoConstraints = false
 
-        let iconView = UIImageView()
-        iconView.image = UIImage(named: icon)
-        iconView.contentMode = .scaleAspectFit
-        iconView.translatesAutoresizingMaskIntoConstraints = false
+        let bg = UIImageView(image: UIImage(named: background))
+        bg.contentMode = .scaleAspectFill
+        bg.translatesAutoresizingMaskIntoConstraints = false
 
         let titleLabel = UILabel()
         titleLabel.text = title
-        titleLabel.font = Theme.Fonts.regular(12)
-        titleLabel.textColor = Theme.Colors.textSecondary
+        titleLabel.font = Theme.Fonts.bold(16)
+        titleLabel.textColor = .white
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         let valueLabel = UILabel()
         valueLabel.text = value
         valueLabel.font = Theme.Fonts.bold(16)
-        valueLabel.textColor = Theme.Colors.primaryYellow
+        valueLabel.textColor = .white
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        card.addSubview(iconView)
+        card.addSubview(bg)
         card.addSubview(titleLabel)
         card.addSubview(valueLabel)
 
         NSLayoutConstraint.activate([
-            iconView.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
-            iconView.centerYAnchor.constraint(equalTo: card.centerYAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 28),
-            iconView.heightAnchor.constraint(equalToConstant: 28),
-
-            titleLabel.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 8),
-            titleLabel.topAnchor.constraint(equalTo: card.topAnchor, constant: 16),
-
+            bg.topAnchor.constraint(equalTo: card.topAnchor),
+            bg.leadingAnchor.constraint(equalTo: card.leadingAnchor),
+            bg.trailingAnchor.constraint(equalTo: card.trailingAnchor),
+            bg.bottomAnchor.constraint(equalTo: card.bottomAnchor),
+            titleLabel.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 16),
+            titleLabel.topAnchor.constraint(equalTo: card.topAnchor, constant: 14),
             valueLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            valueLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4)
+            valueLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 2)
         ])
 
         return card
     }
 
-    // MARK: - 菜单列表
-
-    /// 创建菜单列表（对应 Android 的 4 个菜单项，60dp 高度）
-    private func createMenuList() -> UIView {
-        let container = UIView()
-        container.backgroundColor = Theme.Colors.cardBackground
-        container.layer.cornerRadius = Theme.Dimensions.cornerRadius
-        container.translatesAutoresizingMaskIntoConstraints = false
+    private func createMenuList() -> UIStackView {
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.spacing = 12
+        stack.translatesAutoresizingMaskIntoConstraints = false
 
         let menuItems: [(icon: String, title: String)] = [
-            ("ic_collection", "My Collection"),
-            ("ic_browse", "Browse Records"),
-            ("ic_customer", "Customer Service"),
+            ("ic_collection", "My collection"),
+            ("ic_browse", "Browse records"),
+            ("ic_customer", "Customer service"),
             ("ic_settings", "Settings")
         ]
 
-        let stack = UIStackView()
-        stack.axis = .vertical
-        stack.spacing = 0
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(stack)
-
         for (index, item) in menuItems.enumerated() {
-            let row = createMenuRow(icon: item.icon, title: item.title, tag: index)
-            stack.addArrangedSubview(row)
-
-            // 行间分隔线（最后一行不加）
-            if index < menuItems.count - 1 {
-                let separator = UIView()
-                separator.backgroundColor = Theme.Colors.separator
-                separator.translatesAutoresizingMaskIntoConstraints = false
-                stack.addArrangedSubview(separator)
-                separator.heightAnchor.constraint(equalToConstant: 0.5).isActive = true
-            }
+            stack.addArrangedSubview(createMenuRow(icon: item.icon, title: item.title, tag: index))
         }
 
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: container.topAnchor),
-            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            stack.bottomAnchor.constraint(equalTo: container.bottomAnchor)
-        ])
-
-        return container
+        return stack
     }
 
-    /// 创建单个菜单行（60dp 高度）
     private func createMenuRow(icon: String, title: String, tag: Int) -> UIView {
         let row = UIView()
+        row.backgroundColor = Theme.Colors.cardBackground
+        row.layer.cornerRadius = 12
         row.translatesAutoresizingMaskIntoConstraints = false
-        row.heightAnchor.constraint(equalToConstant: 56).isActive = true
+        row.heightAnchor.constraint(equalToConstant: 58).isActive = true
 
-        let iconView = UIImageView()
-        iconView.image = UIImage(named: icon)
+        let iconView = UIImageView(image: UIImage(named: icon))
         iconView.contentMode = .scaleAspectFit
         iconView.translatesAutoresizingMaskIntoConstraints = false
 
         let titleLabel = UILabel()
         titleLabel.text = title
-        titleLabel.font = Theme.Fonts.regular(15)
-        titleLabel.textColor = Theme.Colors.textPrimary
+        titleLabel.font = Theme.Fonts.regular(16)
+        titleLabel.textColor = .white
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         let arrowLabel = UILabel()
         arrowLabel.text = "›"
-        arrowLabel.font = Theme.Fonts.regular(20)
+        arrowLabel.font = Theme.Fonts.regular(36)
         arrowLabel.textColor = Theme.Colors.textSecondary
         arrowLabel.translatesAutoresizingMaskIntoConstraints = false
 
@@ -410,39 +426,41 @@ class MineViewController: UIViewController {
         row.addSubview(arrowLabel)
 
         NSLayoutConstraint.activate([
-            iconView.leadingAnchor.constraint(equalTo: row.leadingAnchor, constant: 16),
+            iconView.leadingAnchor.constraint(equalTo: row.leadingAnchor, constant: 22),
             iconView.centerYAnchor.constraint(equalTo: row.centerYAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 22),
-            iconView.heightAnchor.constraint(equalToConstant: 22),
+            iconView.widthAnchor.constraint(equalToConstant: 24),
+            iconView.heightAnchor.constraint(equalToConstant: 24),
 
-            titleLabel.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 12),
+            titleLabel.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 18),
             titleLabel.centerYAnchor.constraint(equalTo: row.centerYAnchor),
 
-            arrowLabel.trailingAnchor.constraint(equalTo: row.trailingAnchor, constant: -16),
+            arrowLabel.trailingAnchor.constraint(equalTo: row.trailingAnchor, constant: -24),
             arrowLabel.centerYAnchor.constraint(equalTo: row.centerYAnchor)
         ])
 
-        // 点击手势
         row.tag = tag
-        let tap = UITapGestureRecognizer(target: self, action: #selector(menuItemTapped(_:)))
-        row.addGestureRecognizer(tap)
-
+        row.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(menuItemTapped(_:))))
         return row
     }
 
-    /// 余额卡片点击 → 充值页
+    @objc private func editProfileTapped() {
+        pushAppViewController(EditProfileViewController(), animated: true)
+    }
+
+    @objc private func homepageTapped() {
+        let vc = UserProfileViewController()
+        vc.user = user
+        pushAppViewController(vc, animated: true)
+    }
+
     @objc private func rechargeTapped() {
-        let vc = RechargeViewController()
-        pushAppViewController(vc, animated: true)
+        pushAppViewController(RechargeViewController(), animated: true)
     }
 
-    /// 等级卡片点击 → 等级页（对应 Android UserLevelActivity）
     @objc private func levelTapped() {
-        let vc = UserLevelViewController()
-        pushAppViewController(vc, animated: true)
+        pushAppViewController(UserLevelViewController(), animated: true)
     }
 
-    /// 粉丝/关注/好友点击（对应 Android 的 3 个跳转）
     @objc private func statsTapped(_ gesture: UITapGestureRecognizer) {
         guard let tag = gesture.view?.tag else { return }
         let vc = FansViewController()
@@ -455,46 +473,38 @@ class MineViewController: UIViewController {
         pushAppViewController(vc, animated: true)
     }
 
-    /// 菜单项点击（对应 Android 的 4 个跳转）
     @objc private func menuItemTapped(_ gesture: UITapGestureRecognizer) {
         guard let tag = gesture.view?.tag else { return }
         switch tag {
         case 0:
-            // 我的收藏，对应 Android CollectionActivity
             let vc = RoomListViewController()
             vc.listType = .collection
             pushAppViewController(vc, animated: true)
         case 1:
-            // 浏览记录，对应 Android BrowseHistoryActivity
             let vc = RoomListViewController()
             vc.listType = .browseHistory
             pushAppViewController(vc, animated: true)
         case 2:
-            // 客服聊天，对应 Android CustomerServiceActivity
             pushAppViewController(CustomerServiceViewController(), animated: true)
         case 3:
-            let vc = SettingsViewController()
-            pushAppViewController(vc, animated: true)
-        default: break
+            pushAppViewController(SettingsViewController(), animated: true)
+        default:
+            break
         }
     }
 
-    // MARK: - 退出按钮
-
-    /// 创建退出登录按钮（对应 Android 的 Logout 按钮，黄色文字）
     private func createLogoutButton() -> UIButton {
         let button = UIButton(type: .system)
         button.setTitle("Log Out", for: .normal)
         button.setTitleColor(Theme.Colors.primaryYellow, for: .normal)
-        button.titleLabel?.font = Theme.Fonts.bold(16)
+        button.titleLabel?.font = Theme.Fonts.bold(18)
         button.backgroundColor = Theme.Colors.cardBackground
-        button.layer.cornerRadius = Theme.Dimensions.cornerRadius
+        button.layer.cornerRadius = 12
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(logoutTapped), for: .touchUpInside)
         return button
     }
 
-    /// 退出登录点击 - 弹出确认弹窗（对应 Android 的确认 Dialog）
     @objc private func logoutTapped() {
         let alert = UIAlertController(
             title: "Log Out",
@@ -503,7 +513,6 @@ class MineViewController: UIViewController {
         )
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Log Out", style: .destructive) { _ in
-            // 清除用户数据，跳转到欢迎页（对应 Android → WelcomeActivity）
             UserManager.shared.logout()
             guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                   let window = windowScene.windows.first else { return }
@@ -512,5 +521,28 @@ class MineViewController: UIViewController {
             window.makeKeyAndVisible()
         })
         present(alert, animated: true)
+    }
+}
+
+private final class GradientView: UIView {
+    private let gradientLayer = CAGradientLayer()
+    private let colors: [UIColor]
+
+    init(colors: [UIColor]) {
+        self.colors = colors
+        super.init(frame: .zero)
+        layer.insertSublayer(gradientLayer, at: 0)
+        gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
+        gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
+        gradientLayer.colors = colors.map { $0.cgColor }
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        gradientLayer.frame = bounds
     }
 }

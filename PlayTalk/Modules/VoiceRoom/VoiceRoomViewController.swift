@@ -350,10 +350,12 @@ class VoiceRoomViewController: UIViewController {
             guard let self = self else { return }
             if self.isOwner, let roomId = self.room?.roomId {
                 MockDataManager.shared.removeUserCreatedRoom(roomId: roomId)
-            }
-            self.navigationController?.popViewController(animated: true)
-            if self.navigationController == nil {
-                self.dismiss(animated: true)
+                self.navigationController?.popToRootViewController(animated: true)
+            } else {
+                self.navigationController?.popViewController(animated: true)
+                if self.navigationController == nil {
+                    self.dismiss(animated: true)
+                }
             }
         })
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
@@ -375,7 +377,7 @@ class VoiceRoomViewController: UIViewController {
             showToast("You are not an administrator and cannot access settings")
             return
         }
-        let vc = SettingsViewController()
+        let vc = RoomSettingsViewController()
         pushAppViewController(vc, animated: true)
     }
 
@@ -420,7 +422,12 @@ class VoiceRoomViewController: UIViewController {
         }
         giftVC.modalPresentationStyle = .pageSheet
         if let sheet = giftVC.sheetPresentationController {
-            sheet.detents = [.medium()]
+            if #available(iOS 16.0, *) {
+                sheet.detents = [.custom { _ in 420 }]
+            } else {
+                sheet.detents = [.medium()]
+            }
+            sheet.prefersGrabberVisible = true
         }
         present(giftVC, animated: true)
     }
@@ -460,13 +467,23 @@ class VoiceRoomViewController: UIViewController {
 
         let micIndex = seatIndex - 1 // micUsers 数组 index（0-6 对应 mic2-mic8）
 
-        if micUsers[micIndex] != nil {
-            // 已有人 → 弹出用户信息（对应 Android UserProfileDialog）
-            let alert = UIAlertController(title: micUsers[micIndex]?.name, message: "On Mic \(seatIndex + 1)", preferredStyle: .actionSheet)
-            alert.addAction(UIAlertAction(title: "Drop Mic", style: .destructive) { [weak self] _ in
-                self?.micUsers[micIndex] = nil
-                self?.updateMicSeatUI(at: seatIndex)
-            })
+        if let micUser = micUsers[micIndex] {
+            // 已有人 → 自己只能下麦；房主才能踢其他人（对应 Android UserProfileDialog）
+            let currentUserId = UserManager.shared.currentUser?.id ?? MockDataManager.shared.users[0].id
+            let isCurrentUserMic = micUser.id == currentUserId || currentUserMicIndex == seatIndex
+            let alert = UIAlertController(title: micUser.name, message: "On Mic \(seatIndex + 1)", preferredStyle: .actionSheet)
+            if isCurrentUserMic {
+                alert.addAction(UIAlertAction(title: "Leave Mic", style: .destructive) { [weak self] _ in
+                    self?.micUsers[micIndex] = nil
+                    self?.currentUserMicIndex = -1
+                    self?.updateMicSeatUI(at: seatIndex)
+                })
+            } else if isOwner {
+                alert.addAction(UIAlertAction(title: "Kick Out", style: .destructive) { [weak self] _ in
+                    self?.micUsers[micIndex] = nil
+                    self?.updateMicSeatUI(at: seatIndex)
+                })
+            }
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
             present(alert, animated: true)
         } else if micLockedStatus[micIndex] {
@@ -486,13 +503,23 @@ class VoiceRoomViewController: UIViewController {
                 showToast("This microphone is locked")
             }
         } else {
-            // 空位 → 上麦（对应 Android MicActionDialog）
+            // 空位 → 未上麦直接上麦；已上麦则确认后换麦位
+            if currentUserMicIndex != -1 {
+                let alert = UIAlertController(
+                    title: "Switch Mic",
+                    message: "Move from Mic \(currentUserMicIndex + 1) to Mic \(seatIndex + 1)?",
+                    preferredStyle: .alert
+                )
+                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+                alert.addAction(UIAlertAction(title: "Switch", style: .default) { [weak self] _ in
+                    self?.moveCurrentUserToMic(seatIndex: seatIndex)
+                })
+                present(alert, animated: true)
+                return
+            }
             let alert = UIAlertController(title: "Mic \(seatIndex + 1)", message: nil, preferredStyle: .actionSheet)
             alert.addAction(UIAlertAction(title: "Join Mic", style: .default) { [weak self] _ in
-                let user = UserManager.shared.currentUser ?? MockDataManager.shared.users[0]
-                self?.micUsers[micIndex] = user
-                self?.currentUserMicIndex = seatIndex
-                self?.updateMicSeatUI(at: seatIndex)
+                self?.moveCurrentUserToMic(seatIndex: seatIndex)
             })
             if isOwner {
                 alert.addAction(UIAlertAction(title: "Lock Mic", style: .default) { [weak self] _ in
@@ -517,6 +544,8 @@ class VoiceRoomViewController: UIViewController {
         roomIdLabel.text = "ID: \(room.roomId)"
         roomCoverView.image = UIImage(named: room.coverImage)
         isFavorited = room.isCollected
+        let favImageName = isFavorited ? "ic_room_favorite" : "ic_room_unfavorite"
+        favoriteButton.setImage(UIImage(named: favImageName), for: .normal)
 
         // 设置房主麦位（mic1）
         let hostSeat = micSeatViews[0]
@@ -528,11 +557,11 @@ class VoiceRoomViewController: UIViewController {
             isLocked: false
         )
 
-        // Mock: 随机给几个麦位放人
+        // Mock: 随机给几个麦位放人，避免重复占位
         let mockUsers = MockDataManager.shared.users
+        let shuffledUsers = mockUsers.dropFirst().shuffled()
         for i in 0..<3 {
-            let userIndex = Int.random(in: 1..<mockUsers.count)
-            micUsers[i] = mockUsers[userIndex]
+            micUsers[i] = shuffledUsers[i]
             updateMicSeatUI(at: i + 1)
         }
     }
@@ -570,26 +599,27 @@ class VoiceRoomViewController: UIViewController {
         }
     }
 
-    private func showToast(_ message: String) {
-        let toast = UILabel()
-        toast.text = message
-        toast.font = Theme.Fonts.regular(14)
-        toast.textColor = .white
-        toast.backgroundColor = UIColor.black.withAlphaComponent(0.7)
-        toast.textAlignment = .center
-        toast.layer.cornerRadius = 8
-        toast.layer.masksToBounds = true
-        toast.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(toast)
-        NSLayoutConstraint.activate([
-            toast.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            toast.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -80),
-            toast.widthAnchor.constraint(greaterThanOrEqualToConstant: 100),
-            toast.heightAnchor.constraint(equalToConstant: 36)
-        ])
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            toast.removeFromSuperview()
+    private func moveCurrentUserToMic(seatIndex: Int) {
+        guard seatIndex > 0, seatIndex < micSeatViews.count else { return }
+        let newMicIndex = seatIndex - 1
+        let user = UserManager.shared.currentUser ?? MockDataManager.shared.users[0]
+
+        if micUsers[newMicIndex] != nil {
+            return
         }
+
+        if currentUserMicIndex > 0 {
+            let oldMicIndex = currentUserMicIndex - 1
+            micUsers[oldMicIndex] = nil
+            updateMicSeatUI(at: currentUserMicIndex)
+        } else if let oldMicIndex = micUsers.firstIndex(where: { $0?.id == user.id }) {
+            micUsers[oldMicIndex] = nil
+            updateMicSeatUI(at: oldMicIndex + 1)
+        }
+
+        micUsers[newMicIndex] = user
+        currentUserMicIndex = seatIndex
+        updateMicSeatUI(at: seatIndex)
     }
 
     /// 更新指定麦位的 UI

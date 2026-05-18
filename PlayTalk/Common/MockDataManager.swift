@@ -64,7 +64,7 @@ final class MockDataManager {
                 avatarUri: nil,
                 bio: bios[i],
                 gender: genders[i],
-                countryFlag: "flag_\(i + 1)",
+                countryFlag: "",
                 level: (i % 10) + 1,
                 backgroundImage: "bg_\(i + 1)",
                 isFollowing: i % 3 == 0,
@@ -136,8 +136,8 @@ final class MockDataManager {
                 isCollected: i % 5 == 0,
                 hostName: user.name,
                 hostAvatarImage: user.avatarImage,
-                hostCountry: "US",
-                hostCountryFlag: user.countryFlag,
+                hostCountry: "",
+                hostCountryFlag: "",
                 memberCount: Int.random(in: 3...50),
                 hotValue: Int.random(in: 100...9999)
             )
@@ -166,6 +166,10 @@ final class MockDataManager {
     func addUserCreatedRoom(_ room: VoiceRoom) {
         userCreatedRooms.removeAll { $0.roomId == room.roomId }
         userCreatedRooms.insert(room, at: 0)
+    }
+
+    func isUserCreatedRoom(_ room: VoiceRoom) -> Bool {
+        userCreatedRooms.contains { $0.roomId == room.roomId }
     }
 
     func removeUserCreatedRoom(roomId: String) {
@@ -209,8 +213,8 @@ final class MockDataManager {
     /// 我的房间 - 对应 Android MessageFragment.findUserRoom，只找当前用户作为房主的房间
     func getMyRoom() -> VoiceRoom? {
         guard let currentUser = UserManager.shared.currentUser else { return nil }
-        return (userCreatedRooms + voiceRooms).first { room in
-            room.hostName == currentUser.name || room.hostAvatarImage == currentUser.avatarImage
+        return userCreatedRooms.first { room in
+            room.hostName == currentUser.name && room.hostAvatarImage == currentUser.avatarImage
         }
     }
 
@@ -242,6 +246,7 @@ final class MockDataManager {
         ]
 
         let viewCounts = [78000, 45000, 32000, 28000, 15000]
+        let postImages = ["pubg_1", "minecraft_1", "fortnite_1", "thesims_1", "bg_room_background"]
 
         return (0..<5).map { i in
             let user = users[i]
@@ -254,7 +259,7 @@ final class MockDataManager {
                 time: "\(Int.random(in: 1...24))h ago",
                 title: titles[i],
                 content: "This is the content for post \(i + 1)...",
-                images: [],
+                images: [postImages[i]],
                 imageUris: [],
                 viewCount: viewCounts[i],
                 commentCount: Int.random(in: 10...200),
@@ -295,7 +300,7 @@ final class MockDataManager {
                 unreadCount: i < 3 ? Int.random(in: 1...5) : 0,
                 timestamp: Date().timeIntervalSince1970 - Double(i * 3600),
                 gender: user.gender,
-                countryFlag: user.countryFlag,
+                countryFlag: "",
                 level: user.level,
                 bio: user.bio
             )
@@ -304,8 +309,28 @@ final class MockDataManager {
 
     // MARK: - 用户统计数据（对应 Android MineFragment）
 
-    var fansCount: Int = 8486
-    var followingCount: Int = 346
-    var friendsCount: Int = 487000
     var coinBalance: Int = 12580
+
+    func getFansUsers() -> [User] {
+        Array(users.prefix(15))
+    }
+
+    func getFollowingUsers() -> [User] {
+        users.filter { $0.isFollowing }
+    }
+
+    func getFriendUsers() -> [User] {
+        users.enumerated().compactMap { index, user in
+            (user.isFollowing || index % 4 == 1) ? user : nil
+        }
+    }
+
+    var fansCount: Int { getFansUsers().count }
+    var followingCount: Int { getFollowingUsers().count }
+    var friendsCount: Int { getFriendUsers().count }
+
+    func setFollowing(userId: Int, isFollowing: Bool) {
+        guard let index = users.firstIndex(where: { $0.id == userId }) else { return }
+        users[index].isFollowing = isFollowing
+    }
 }

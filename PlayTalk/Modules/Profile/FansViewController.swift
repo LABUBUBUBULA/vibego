@@ -1,30 +1,18 @@
 import UIKit
 
-/// 粉丝列表页 - 对应 Android GameMic 的 FansActivity
-/// 也复用于关注列表（FollowingActivity）和好友列表（FriendsActivity）
-/// 列表展示：头像 + 昵称 + 签名 + 关注/取关按钮
+/// 粉丝/关注/朋友列表页
 class FansViewController: UIViewController {
 
-    // MARK: - 页面类型
-
     enum ListType {
-        case fans       // 粉丝
-        case following  // 关注
-        case friends    // 好友
-        case visitors   // 访客
+        case fans
+        case following
+        case friends
+        case visitors
     }
 
-    /// 页面类型
     var listType: ListType = .fans
-
-    // MARK: - 数据
-
-    /// 用户列表（Mock数据）
     private var users: [User] = []
 
-    // MARK: - UI 组件
-
-    /// 用户列表（对应 Android RecyclerView）
     private lazy var tableView: UITableView = {
         let tv = UITableView()
         tv.backgroundColor = .clear
@@ -36,7 +24,16 @@ class FansViewController: UIViewController {
         return tv
     }()
 
-    // MARK: - 生命周期
+    private let emptyLabel: UILabel = {
+        let label = UILabel()
+        label.font = Theme.Fonts.medium(15)
+        label.textColor = Theme.Colors.textSecondary
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.isHidden = true
+        return label
+    }()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -46,9 +43,11 @@ class FansViewController: UIViewController {
         loadData()
     }
 
-    // MARK: - 配置
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        loadData()
+    }
 
-    /// 根据类型设置标题
     private func setupTitle() {
         switch listType {
         case .fans: title = "Fans"
@@ -60,59 +59,99 @@ class FansViewController: UIViewController {
 
     private func setupUI() {
         view.addSubview(tableView)
+        view.addSubview(emptyLabel)
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+
+            emptyLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            emptyLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            emptyLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
+            emptyLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32)
         ])
     }
 
-    /// 加载Mock用户数据
     private func loadData() {
-        let allUsers = MockDataManager.shared.users
         switch listType {
-        case .fans: users = Array(allUsers[0..<10])
-        case .following: users = Array(allUsers[5..<15])
-        case .friends: users = Array(allUsers[3..<12])
-        case .visitors: users = Array(allUsers[10..<20])
+        case .fans:
+            users = MockDataManager.shared.getFansUsers()
+            emptyLabel.text = "No fans yet"
+        case .following:
+            users = MockDataManager.shared.getFollowingUsers()
+            emptyLabel.text = "No following users yet"
+        case .friends:
+            users = MockDataManager.shared.getFriendUsers()
+            emptyLabel.text = "No friends yet"
+        case .visitors:
+            users = Array(MockDataManager.shared.users.suffix(10))
+            emptyLabel.text = "No visitors yet"
         }
+        emptyLabel.isHidden = !users.isEmpty
         tableView.reloadData()
+    }
+
+    private func updateFollowState(for userId: Int, isFollowing: Bool) {
+        MockDataManager.shared.setFollowing(userId: userId, isFollowing: isFollowing)
+        loadData()
     }
 }
 
-// MARK: - TableView 数据源
 extension FansViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return users.count
+        users.count
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: UserListCell.reuseId, for: indexPath) as! UserListCell
-        cell.configure(with: users[indexPath.row])
+        let user = users[indexPath.row]
+        cell.configure(with: user, listType: listType)
+        cell.onFollowTap = { [weak self] in
+            self?.updateFollowState(for: user.id, isFollowing: !user.isFollowing)
+        }
+        cell.onChatTap = { [weak self] in
+            self?.openChat(with: user)
+        }
         return cell
     }
 
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        return 72
+        76
     }
 
-    /// 点击进入他人主页（对应 Android → UserProfileActivity）
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         let vc = UserProfileViewController()
         vc.user = users[indexPath.row]
         pushAppViewController(vc, animated: true)
     }
+
+    private func openChat(with user: User) {
+        let vc = ChatViewController()
+        vc.chatUser = Message(
+            userId: user.id,
+            avatarImage: user.avatarImage,
+            name: user.name,
+            lastMessage: "",
+            time: "",
+            unreadCount: 0,
+            timestamp: Date().timeIntervalSince1970,
+            gender: user.gender,
+            countryFlag: user.countryFlag,
+            level: user.level,
+            bio: user.bio
+        )
+        pushAppViewController(vc, animated: true)
+    }
 }
 
-// MARK: - 用户列表 Cell（粉丝/关注/好友共用）
-
-/// 用户列表行 - 头像(48dp) + 昵称 + 签名 + 关注按钮
 class UserListCell: UITableViewCell {
     static let reuseId = "UserListCell"
 
-    /// 头像
+    var onFollowTap: (() -> Void)?
+    var onChatTap: (() -> Void)?
+
     private let avatarView: UIImageView = {
         let iv = UIImageView()
         iv.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.3)
@@ -123,7 +162,6 @@ class UserListCell: UITableViewCell {
         return iv
     }()
 
-    /// 昵称
     private let nameLabel: UILabel = {
         let label = UILabel()
         label.font = Theme.Fonts.bold(15)
@@ -132,7 +170,6 @@ class UserListCell: UITableViewCell {
         return label
     }()
 
-    /// 签名
     private let bioLabel: UILabel = {
         let label = UILabel()
         label.font = Theme.Fonts.regular(12)
@@ -142,8 +179,7 @@ class UserListCell: UITableViewCell {
         return label
     }()
 
-    /// 关注按钮
-    private let followButton: UIButton = {
+    private let actionButton: UIButton = {
         let btn = UIButton(type: .system)
         btn.titleLabel?.font = Theme.Fonts.medium(12)
         btn.layer.cornerRadius = 14
@@ -159,7 +195,8 @@ class UserListCell: UITableViewCell {
         contentView.addSubview(avatarView)
         contentView.addSubview(nameLabel)
         contentView.addSubview(bioLabel)
-        contentView.addSubview(followButton)
+        contentView.addSubview(actionButton)
+        actionButton.addTarget(self, action: #selector(actionTapped), for: .touchUpInside)
 
         NSLayoutConstraint.activate([
             avatarView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
@@ -169,16 +206,16 @@ class UserListCell: UITableViewCell {
 
             nameLabel.topAnchor.constraint(equalTo: avatarView.topAnchor, constant: 4),
             nameLabel.leadingAnchor.constraint(equalTo: avatarView.trailingAnchor, constant: 12),
-            nameLabel.trailingAnchor.constraint(lessThanOrEqualTo: followButton.leadingAnchor, constant: -8),
+            nameLabel.trailingAnchor.constraint(lessThanOrEqualTo: actionButton.leadingAnchor, constant: -8),
 
             bioLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 4),
             bioLabel.leadingAnchor.constraint(equalTo: nameLabel.leadingAnchor),
-            bioLabel.trailingAnchor.constraint(lessThanOrEqualTo: followButton.leadingAnchor, constant: -8),
+            bioLabel.trailingAnchor.constraint(lessThanOrEqualTo: actionButton.leadingAnchor, constant: -8),
 
-            followButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            followButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            followButton.widthAnchor.constraint(equalToConstant: 72),
-            followButton.heightAnchor.constraint(equalToConstant: 28)
+            actionButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            actionButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            actionButton.widthAnchor.constraint(equalToConstant: 82),
+            actionButton.heightAnchor.constraint(equalToConstant: 28)
         ])
     }
 
@@ -186,20 +223,28 @@ class UserListCell: UITableViewCell {
         fatalError("init(coder:) has not been implemented")
     }
 
-    /// 配置用户数据
-    func configure(with user: User) {
+    func configure(with user: User, listType: FansViewController.ListType) {
         avatarView.image = UIImage(named: user.avatarImage)
         nameLabel.text = user.name
         bioLabel.text = user.bio
 
-        if user.isFollowing {
-            followButton.setTitle("Following", for: .normal)
-            followButton.setTitleColor(Theme.Colors.textSecondary, for: .normal)
-            followButton.backgroundColor = Theme.Colors.cardBackground
+        switch listType {
+        case .friends:
+            actionButton.setTitle("Chat", for: .normal)
+            actionButton.setTitleColor(Theme.Colors.darkerBackground, for: .normal)
+            actionButton.backgroundColor = Theme.Colors.primaryYellow
+        default:
+            actionButton.setTitle(user.isFollowing ? "Following" : "Follow", for: .normal)
+            actionButton.setTitleColor(user.isFollowing ? Theme.Colors.textSecondary : Theme.Colors.darkerBackground, for: .normal)
+            actionButton.backgroundColor = user.isFollowing ? Theme.Colors.cardBackground : Theme.Colors.primaryYellow
+        }
+    }
+
+    @objc private func actionTapped() {
+        if actionButton.title(for: .normal) == "Chat" {
+            onChatTap?()
         } else {
-            followButton.setTitle("Follow", for: .normal)
-            followButton.setTitleColor(Theme.Colors.darkerBackground, for: .normal)
-            followButton.backgroundColor = Theme.Colors.primaryYellow
+            onFollowTap?()
         }
     }
 }

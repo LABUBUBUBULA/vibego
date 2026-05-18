@@ -130,9 +130,10 @@ class EditProfileViewController: UIViewController {
             nickname: nickname,
             gender: UserManager.shared.currentUser?.gender ?? "male",
             avatarUri: nil,
-            country: "US",
-            countryFlag: UserManager.shared.currentUser?.countryFlag ?? "flag_usa",
-            interests: UserManager.shared.currentUser?.interests ?? ""
+            country: "",
+            countryFlag: "",
+            interests: UserManager.shared.currentUser?.interests ?? "",
+            bio: bioField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         )
 
         navigationController?.popViewController(animated: true)

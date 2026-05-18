@@ -12,17 +12,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         window = UIWindow(windowScene: windowScene)
 
-        // 根据登录状态决定根页面（对应 Android SplashActivity 的 loginFlag 判断）
-        if UserManager.shared.isLoggedIn {
-            // 已登录 → 直接进主页
-            window?.rootViewController = AppNavigationController(rootViewController: MainTabBarController())
-        } else {
-            // 未登录 → 显示欢迎页
-            let welcomeVC = WelcomeViewController()
-            let nav = UINavigationController(rootViewController: welcomeVC)
-            window?.rootViewController = nav
-        }
-
+        window?.rootViewController = SplashViewController()
         window?.makeKeyAndVisible()
     }
 }

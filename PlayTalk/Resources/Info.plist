@@ -39,10 +39,11 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
-	<key>UILaunchScreen</key>
-	<dict>
-		<key>UIColorName</key>
-		<string>AccentColor</string>
-	</dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>PlayTalk needs microphone access to send voice messages.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>PlayTalk needs photo library access to send images and videos.</string>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
 </dict>
 </plist>

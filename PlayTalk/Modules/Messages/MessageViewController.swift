@@ -52,7 +52,7 @@ class MessageViewController: UIViewController {
             buttonsContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
             buttonsContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             buttonsContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            buttonsContainer.heightAnchor.constraint(equalToConstant: 80),
+            buttonsContainer.heightAnchor.constraint(equalToConstant: 88),
 
             // 消息列表
             messageTableView.topAnchor.constraint(equalTo: buttonsContainer.bottomAnchor, constant: 16),
@@ -94,8 +94,7 @@ class MessageViewController: UIViewController {
     /// 创建单个功能按钮（80x80dp 图标 + 标题）
     private func createFunctionButton(icon: String, title: String, tag: Int) -> UIView {
         let container = UIView()
-        container.backgroundColor = Theme.Colors.cardBackground
-        container.layer.cornerRadius = Theme.Dimensions.cornerRadius
+        container.backgroundColor = .clear
         container.translatesAutoresizingMaskIntoConstraints = false
 
         // 图标
@@ -117,11 +116,11 @@ class MessageViewController: UIViewController {
 
         NSLayoutConstraint.activate([
             iconView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            iconView.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
-            iconView.widthAnchor.constraint(equalToConstant: 28),
-            iconView.heightAnchor.constraint(equalToConstant: 28),
+            iconView.topAnchor.constraint(equalTo: container.topAnchor, constant: 4),
+            iconView.widthAnchor.constraint(equalToConstant: 44),
+            iconView.heightAnchor.constraint(equalToConstant: 44),
 
-            titleLabel.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: 4),
+            titleLabel.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: 8),
             titleLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor)
         ])
 
@@ -171,27 +170,6 @@ class MessageViewController: UIViewController {
         pushAppViewController(vc, animated: true)
     }
 
-    private func showToast(_ message: String) {
-        let toast = UILabel()
-        toast.text = message
-        toast.font = Theme.Fonts.regular(14)
-        toast.textColor = .white
-        toast.backgroundColor = UIColor.black.withAlphaComponent(0.7)
-        toast.textAlignment = .center
-        toast.layer.cornerRadius = 8
-        toast.layer.masksToBounds = true
-        toast.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(toast)
-        NSLayoutConstraint.activate([
-            toast.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            toast.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -80),
-            toast.widthAnchor.constraint(greaterThanOrEqualToConstant: 100),
-            toast.heightAnchor.constraint(equalToConstant: 36)
-        ])
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            toast.removeFromSuperview()
-        }
-    }
 }
 
 // MARK: - 消息列表 TableView 数据源和代理
@@ -217,5 +195,31 @@ extension MessageViewController: UITableViewDataSource, UITableViewDelegate {
         let vc = ChatViewController()
         vc.chatUser = messages[indexPath.row]
         pushAppViewController(vc, animated: true)
+    }
+
+    /// 左滑可进用户主页，保证消息列表里的每个人都有主页入口
+    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        let profile = UIContextualAction(style: .normal, title: "Profile") { [weak self] _, _, completion in
+            guard let self else { return }
+            let message = self.messages[indexPath.row]
+            let vc = UserProfileViewController()
+            vc.user = MockDataManager.shared.users.first { $0.id == message.userId } ?? User(
+                id: message.userId,
+                name: message.name,
+                avatarImage: message.avatarImage,
+                avatarUri: nil,
+                bio: message.bio,
+                gender: message.gender,
+                countryFlag: "",
+                level: message.level,
+                backgroundImage: "bg_\(abs(message.userId) % 20 + 1)",
+                isFollowing: false,
+                interests: "PUBG"
+            )
+            self.pushAppViewController(vc, animated: true)
+            completion(true)
+        }
+        profile.backgroundColor = Theme.Colors.primaryYellow
+        return UISwipeActionsConfiguration(actions: [profile])
     }
 }

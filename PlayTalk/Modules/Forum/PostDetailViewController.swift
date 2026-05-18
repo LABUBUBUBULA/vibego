@@ -249,6 +249,15 @@ extension PostDetailViewController: UITableViewDataSource, UITableViewDelegate {
         contentLabel.numberOfLines = 0
         contentLabel.translatesAutoresizingMaskIntoConstraints = false
 
+        let postImageView = UIImageView()
+        postImageView.contentMode = .scaleAspectFill
+        postImageView.layer.cornerRadius = 14
+        postImageView.layer.masksToBounds = true
+        postImageView.backgroundColor = Theme.Colors.separator
+        postImageView.image = post.images.first.flatMap { UIImage(named: $0) }
+        postImageView.isHidden = postImageView.image == nil
+        postImageView.translatesAutoresizingMaskIntoConstraints = false
+
         // 统计信息
         let statsLabel = UILabel()
         statsLabel.text = "👁 \(post.viewCountText)   💬 \(post.commentCount)   ❤️ \(post.likeCount)"
@@ -259,7 +268,10 @@ extension PostDetailViewController: UITableViewDataSource, UITableViewDelegate {
         cell.contentView.addSubview(authorLabel)
         cell.contentView.addSubview(titleLabel)
         cell.contentView.addSubview(contentLabel)
+        cell.contentView.addSubview(postImageView)
         cell.contentView.addSubview(statsLabel)
+
+        let imageHeight = postImageView.heightAnchor.constraint(equalToConstant: postImageView.isHidden ? 0 : 180)
 
         NSLayoutConstraint.activate([
             authorLabel.topAnchor.constraint(equalTo: cell.contentView.topAnchor, constant: 16),
@@ -273,7 +285,12 @@ extension PostDetailViewController: UITableViewDataSource, UITableViewDelegate {
             contentLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             contentLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
 
-            statsLabel.topAnchor.constraint(equalTo: contentLabel.bottomAnchor, constant: 16),
+            postImageView.topAnchor.constraint(equalTo: contentLabel.bottomAnchor, constant: postImageView.isHidden ? 0 : 14),
+            postImageView.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            postImageView.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
+            imageHeight,
+
+            statsLabel.topAnchor.constraint(equalTo: postImageView.bottomAnchor, constant: 16),
             statsLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             statsLabel.bottomAnchor.constraint(equalTo: cell.contentView.bottomAnchor, constant: -16)
         ])

@@ -2,7 +2,7 @@ import UIKit
 
 /// 帖子模型 - 对应 Android GameMic 的 Post.java
 /// 用于论坛板块的帖子列表和详情
-struct Post {
+struct Post: Codable {
     let id: Int                     // 帖子 ID
     var authorId: String            // 作者用户 ID
     var authorName: String          // 作者昵称

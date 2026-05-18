@@ -1,24 +1,17 @@
 import UIKit
 
-/// 设置页 - 对应 Android GameMic 的 SettingsActivity
-/// 包含：账号注销、隐私政策、服务条款、清除缓存、关于
 class SettingsViewController: UIViewController {
 
-    // MARK: - 数据
-
-    /// 设置项列表
-    private let sections: [(title: String, items: [(icon: String, title: String)])] = [
+    private let sections: [(title: String, items: [String])] = [
         ("Support", [
-            ("ic_report", "Terms of Service"),
-            ("ic_see", "Privacy Policy"),
-            ("logo", "About PlayTalk"),
+            "Terms of Service",
+            "Privacy Policy",
+            "About PlayTalk"
         ]),
         ("Account", [
-            ("ic_room_delete", "Delete Account"),
+            "Delete Account"
         ])
     ]
-
-    // MARK: - UI 组件
 
     private lazy var tableView: UITableView = {
         let tv = UITableView(frame: .zero, style: .insetGrouped)
@@ -28,8 +21,6 @@ class SettingsViewController: UIViewController {
         tv.translatesAutoresizingMaskIntoConstraints = false
         return tv
     }()
-
-    // MARK: - 生命周期
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -47,30 +38,39 @@ class SettingsViewController: UIViewController {
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
+
+    private var appVersionText: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
 }
 
-// MARK: - TableView 数据源
 extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
     func numberOfSections(in tableView: UITableView) -> Int {
-        return sections.count
+        sections.count
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return sections[section].items.count
+        sections[section].items.count
     }
 
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        return sections[section].title
+        sections[section].title
+    }
+
+    func tableView(_ tableView: UITableView, willDisplayHeaderView view: UIView, forSection section: Int) {
+        guard let header = view as? UITableViewHeaderFooterView else { return }
+        header.textLabel?.textColor = .white
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
-        let item = sections[indexPath.section].items[indexPath.row]
-        cell.imageView?.image = UIImage(named: item.icon)
-        cell.imageView?.contentMode = .scaleAspectFit
-        cell.textLabel?.text = item.title
-        cell.textLabel?.textColor = item.title == "Delete Account" ? .systemRed : Theme.Colors.textPrimary
+        let title = sections[indexPath.section].items[indexPath.row]
+        let cell = UITableViewCell(style: title == "About PlayTalk" ? .value1 : .default, reuseIdentifier: nil)
+        cell.textLabel?.text = title
+        cell.textLabel?.textColor = title == "Delete Account" ? .systemRed : Theme.Colors.textPrimary
         cell.textLabel?.font = Theme.Fonts.regular(15)
+        cell.detailTextLabel?.text = title == "About PlayTalk" ? appVersionText : nil
+        cell.detailTextLabel?.textColor = Theme.Colors.textSecondary
+        cell.detailTextLabel?.font = Theme.Fonts.regular(15)
         cell.backgroundColor = Theme.Colors.cardBackground
         cell.accessoryType = .disclosureIndicator
         return cell
@@ -78,9 +78,9 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        let item = sections[indexPath.section].items[indexPath.row]
+        let title = sections[indexPath.section].items[indexPath.row]
 
-        switch item.title {
+        switch title {
         case "Terms of Service":
             pushAppViewController(LegalTextViewController(type: .terms), animated: true)
         case "Privacy Policy":
@@ -107,5 +107,4 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
             break
         }
     }
-
 }
