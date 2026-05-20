@@ -46,12 +46,15 @@ class GameForumViewController: UIViewController {
         view.backgroundColor = Theme.Colors.darkBackground
 
         // 右上角发帖按钮
+        let rawIcon = UIImage(named: "ic_publish") ?? UIImage(systemName: "square.and.pencil")
+        let iconSize = CGSize(width: 20, height: 20)
+        let resizedIcon = UIGraphicsImageRenderer(size: iconSize).image { _ in
+            rawIcon?.draw(in: CGRect(origin: .zero, size: iconSize))
+        }.withRenderingMode(.alwaysTemplate)
         let publishButton = UIButton(type: .system)
-        publishButton.setImage(UIImage(named: "ic_publish") ?? UIImage(systemName: "square.and.pencil"), for: .normal)
+        publishButton.setImage(resizedIcon, for: .normal)
         publishButton.tintColor = Theme.Colors.primaryYellow
-        publishButton.imageView?.contentMode = .scaleAspectFit
-        publishButton.contentEdgeInsets = UIEdgeInsets(top: 7, left: 7, bottom: 7, right: 7)
-        publishButton.frame = CGRect(x: 0, y: 0, width: 34, height: 34)
+        publishButton.frame = CGRect(x: 0, y: 0, width: 32, height: 32)
         publishButton.addTarget(self, action: #selector(createPostTapped), for: .touchUpInside)
         navigationItem.rightBarButtonItem = UIBarButtonItem(customView: publishButton)
 
@@ -84,8 +87,8 @@ class GameForumViewController: UIViewController {
         ]
 
         let imagePrefix = gameName.lowercased()
-        posts = (0..<8).map { i in
-            let user = users[i % users.count]
+        let mockPosts = (0..<8).map { i in
+            let user = users[(i + 1) % users.count]
             return Post(
                 id: 100 + i,
                 authorId: "\(user.id)",
@@ -101,16 +104,25 @@ class GameForumViewController: UIViewController {
                 commentCount: Int.random(in: 5...100),
                 likeCount: Int.random(in: 10...500),
                 isLiked: false,
-                isFollowing: false,
+                isFollowing: MockDataManager.shared.isFollowing(userId: user.id),
                 gameTag: gameName
             )
         }
+        // 用户发布的帖子排前面
+        let savedUserPosts = MockDataManager.shared.getUserPosts(gameTag: gameName)
+        posts = savedUserPosts + mockPosts
         tableView.reloadData()
     }
 
     /// 发帖按钮
     @objc private func createPostTapped() {
         let vc = CreatePostViewController()
+        vc.gameTag = gameName
+        vc.onPostCreated = { [weak self] newPost in
+            guard let self else { return }
+            self.posts.insert(newPost, at: 0)
+            self.tableView.reloadData()
+        }
         pushAppViewController(vc, animated: true)
     }
 }
@@ -136,6 +148,16 @@ extension GameForumViewController: UITableViewDataSource, UITableViewDelegate {
         tableView.deselectRow(at: indexPath, animated: true)
         let vc = PostDetailViewController()
         vc.post = posts[indexPath.row]
+        vc.onPostUpdated = { [weak self] updatedPost in
+            guard let self else { return }
+            self.posts[indexPath.row] = updatedPost
+            self.tableView.reloadRows(at: [indexPath], with: .none)
+        }
+        vc.onPostDeleted = { [weak self] postId in
+            guard let self else { return }
+            self.posts.removeAll { $0.id == postId }
+            self.tableView.reloadData()
+        }
         pushAppViewController(vc, animated: true)
     }
 }
@@ -165,14 +187,36 @@ class PostCell: UITableViewCell {
         return label
     }()
 
-    /// 统计信息
-    private let statsLabel: UILabel = {
+    /// 统计信息容器
+    private let statsContainer: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.spacing = 12
+        stack.alignment = .center
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+
+    /// 创建图标+文字的统计项
+    private func makeStatItem(icon: String, text: String) -> UIStackView {
+        let iconView = UIImageView(image: UIImage(named: icon))
+        iconView.contentMode = .scaleAspectFit
+        iconView.tintColor = Theme.Colors.textSecondary
+        iconView.translatesAutoresizingMaskIntoConstraints = false
+        iconView.widthAnchor.constraint(equalToConstant: 18).isActive = true
+        iconView.heightAnchor.constraint(equalToConstant: 18).isActive = true
+
         let label = UILabel()
+        label.text = text
         label.font = Theme.Fonts.regular(11)
         label.textColor = Theme.Colors.textSecondary
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
+
+        let stack = UIStackView(arrangedSubviews: [iconView, label])
+        stack.axis = .horizontal
+        stack.spacing = 3
+        stack.alignment = .center
+        return stack
+    }
 
     /// 帖子缩略图
     private let postImageView: UIImageView = {
@@ -192,7 +236,7 @@ class PostCell: UITableViewCell {
 
         contentView.addSubview(titleLabel)
         contentView.addSubview(authorLabel)
-        contentView.addSubview(statsLabel)
+        contentView.addSubview(statsContainer)
         contentView.addSubview(postImageView)
 
         NSLayoutConstraint.activate([
@@ -209,9 +253,9 @@ class PostCell: UITableViewCell {
             authorLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             authorLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
 
-            statsLabel.topAnchor.constraint(equalTo: authorLabel.bottomAnchor, constant: 6),
-            statsLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            statsLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor)
+            statsContainer.topAnchor.constraint(equalTo: authorLabel.bottomAnchor, constant: 6),
+            statsContainer.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            statsContainer.trailingAnchor.constraint(lessThanOrEqualTo: titleLabel.trailingAnchor)
         ])
     }
 
@@ -222,8 +266,16 @@ class PostCell: UITableViewCell {
     func configure(with post: Post) {
         titleLabel.text = post.title
         authorLabel.text = "\(post.authorName)  ·  \(post.time)"
-        statsLabel.text = "👁 \(post.viewCountText)  💬 \(post.commentCount)  ❤️ \(post.likeCount)"
+
+        // 清除旧统计项并重建
+        statsContainer.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        statsContainer.addArrangedSubview(makeStatItem(icon: "ic_see", text: post.viewCountText))
+        statsContainer.addArrangedSubview(makeStatItem(icon: "ic_forum_chat", text: "\(post.commentCount)"))
+        statsContainer.addArrangedSubview(makeStatItem(icon: "ic_unlike", text: "\(post.likeCount)"))
         if let imageName = post.images.first, let image = UIImage(named: imageName) {
+            postImageView.image = image
+            postImageView.isHidden = false
+        } else if let uri = post.imageUris.first, let image = UIImage(contentsOfFile: uri) {
             postImageView.image = image
             postImageView.isHidden = false
         } else {

@@ -21,4 +21,18 @@ struct User: Codable {
     var displayAvatar: String {
         return avatarUri ?? avatarImage
     }
+
+    /// 获取可直接展示的头像图片
+    var displayAvatarImage: UIImage? {
+        UIImage.playTalkImage(namedOrPath: displayAvatar)
+    }
+}
+
+extension UIImage {
+    static func playTalkImage(namedOrPath source: String) -> UIImage? {
+        if FileManager.default.fileExists(atPath: source), let image = UIImage(contentsOfFile: source) {
+            return image
+        }
+        return UIImage(named: source)
+    }
 }

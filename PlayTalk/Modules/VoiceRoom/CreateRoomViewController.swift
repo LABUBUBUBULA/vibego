@@ -1,4 +1,5 @@
 import UIKit
+import PhotosUI
 
 /// 创建房间页 - 对应 Android GameMic 的 CreateRoomActivity
 /// 表单：房间封面 + 房间名称 + 密码(可选) + 游戏标签(4选1) + 房间简介
@@ -14,6 +15,8 @@ class CreateRoomViewController: UIViewController {
     /// 标签按钮数组
     private var tagButtons: [UIButton] = []
     private var selectedCoverImageName: String?
+    private var selectedCoverImage: UIImage?
+    private var selectedCoverUri: String?
 
     // MARK: - UI 组件
 
@@ -50,7 +53,10 @@ class CreateRoomViewController: UIViewController {
     /// 房间名称输入框
     private let roomNameField: UITextField = {
         let tf = UITextField()
-        tf.placeholder = "Enter room name"
+        tf.attributedPlaceholder = NSAttributedString(
+            string: "Enter room name",
+            attributes: [.foregroundColor: Theme.Colors.textSecondary]
+        )
         tf.textColor = Theme.Colors.textPrimary
         tf.font = Theme.Fonts.regular(16)
         tf.backgroundColor = Theme.Colors.cardBackground
@@ -64,7 +70,10 @@ class CreateRoomViewController: UIViewController {
     /// 房间密码输入框（可选）
     private let roomPasswordField: UITextField = {
         let tf = UITextField()
-        tf.placeholder = "Password (optional)"
+        tf.attributedPlaceholder = NSAttributedString(
+            string: "Password (optional)",
+            attributes: [.foregroundColor: Theme.Colors.textSecondary]
+        )
         tf.textColor = Theme.Colors.textPrimary
         tf.font = Theme.Fonts.regular(16)
         tf.backgroundColor = Theme.Colors.cardBackground
@@ -115,7 +124,7 @@ class CreateRoomViewController: UIViewController {
         let label = UILabel()
         label.text = "Set up your room profile.."
         label.font = Theme.Fonts.regular(14)
-        label.textColor = Theme.Colors.textSecondary.withAlphaComponent(0.5)
+        label.textColor = Theme.Colors.textSecondary
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -250,14 +259,32 @@ class CreateRoomViewController: UIViewController {
     }
 
     @objc private func coverTapped() {
-        updateCoverForSelectedTag()
+        var configuration = PHPickerConfiguration(photoLibrary: .shared())
+        configuration.filter = .images
+        configuration.selectionLimit = 1
+        let picker = PHPickerViewController(configuration: configuration)
+        picker.delegate = self
+        present(picker, animated: true)
     }
 
     private func updateCoverForSelectedTag() {
+        guard selectedCoverImage == nil else { return }
         let imageName = "ph_\(selectedTag.lowercased())"
         selectedCoverImageName = imageName
         coverImageView.image = UIImage(named: imageName)
         addCoverLabel.isHidden = true
+    }
+
+    private func saveCoverImage(_ image: UIImage) -> String? {
+        guard let data = image.jpegData(compressionQuality: 0.85) else { return nil }
+        let fileName = "room_cover_\(UUID().uuidString).jpg"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+        do {
+            try data.write(to: url)
+            return url.path
+        } catch {
+            return nil
+        }
     }
 
     /// 更新标签选中状态 UI
@@ -283,7 +310,7 @@ class CreateRoomViewController: UIViewController {
             return
         }
 
-        guard let coverImageName = selectedCoverImageName else {
+        guard selectedCoverImage != nil || selectedCoverImageName != nil else {
             showToast("Please select a cover image")
             return
         }
@@ -297,14 +324,14 @@ class CreateRoomViewController: UIViewController {
         let room = VoiceRoom(
             roomId: roomId,
             title: roomName,
-            coverImage: coverImageName,
-            coverUri: nil,
+            coverImage: selectedCoverImageName ?? "ph_\(selectedTag.lowercased())",
+            coverUri: selectedCoverUri,
             gameTag: selectedTag,
             description: profileText.isEmpty ? "Welcome to \(roomName)!" : profileText,
             roomName: roomName,
             isCollected: false,
             hostName: user.name,
-            hostAvatarImage: user.avatarImage,
+            hostAvatarImage: user.displayAvatar,
             hostCountry: "",
             hostCountryFlag: "",
             memberCount: 1,
@@ -320,6 +347,25 @@ class CreateRoomViewController: UIViewController {
         pushAppViewController(vc, animated: true)
     }
 
+}
+
+extension CreateRoomViewController: PHPickerViewControllerDelegate {
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        picker.dismiss(animated: true)
+        guard let provider = results.first?.itemProvider,
+              provider.canLoadObject(ofClass: UIImage.self) else { return }
+
+        provider.loadObject(ofClass: UIImage.self) { [weak self] image, _ in
+            guard let self, let image = image as? UIImage else { return }
+            DispatchQueue.main.async {
+                self.selectedCoverImage = image
+                self.selectedCoverImageName = "ph_\(self.selectedTag.lowercased())"
+                self.selectedCoverUri = self.saveCoverImage(image)
+                self.coverImageView.image = image
+                self.addCoverLabel.isHidden = true
+            }
+        }
+    }
 }
 
 // MARK: - UITextViewDelegate（简介占位文字显隐）

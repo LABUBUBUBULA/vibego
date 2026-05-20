@@ -4,6 +4,7 @@ import UIKit
 class UserProfileViewController: UIViewController {
 
     var user: User?
+    private var primaryActionButton: UIButton?
 
     private let profileBackgroundColor = UIColor(hex: "#191925")
 
@@ -39,6 +40,7 @@ class UserProfileViewController: UIViewController {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(true, animated: animated)
         scrollView.contentInsetAdjustmentBehavior = .never
+        refreshUserState()
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -50,6 +52,31 @@ class UserProfileViewController: UIViewController {
 
     private func setupUI() {
         guard let user = user else { return }
+
+        // ── 背景图直接钉到 view.topAnchor，彻底绕开 scrollView inset 问题 ──
+        let heroBg = UIImageView(image: UIImage(named: profileBackgroundImage(for: user))
+                                 ?? UIImage(named: "ic_mine_backpic")
+                                 ?? UIImage(named: "bg_mine"))
+        heroBg.contentMode = .scaleAspectFill
+        heroBg.clipsToBounds = true
+        heroBg.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(heroBg)
+
+        let heroDim = ProfileGradientView(
+            colors: [.clear, .clear, profileBackgroundColor.withAlphaComponent(0.92)],
+            startPoint: CGPoint(x: 0.5, y: 0),
+            endPoint: CGPoint(x: 0.5, y: 1),
+            locations: [0, 0.55, 1]
+        )
+        heroDim.isUserInteractionEnabled = false
+        heroDim.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(heroDim)
+
+        // ── 其余内容区（深色背景）──
+        let pageBackground = UIView()
+        pageBackground.backgroundColor = profileBackgroundColor
+        pageBackground.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(pageBackground)
 
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
@@ -64,23 +91,39 @@ class UserProfileViewController: UIViewController {
         contentView.addSubview(actions)
         contentView.addSubview(giftWall)
 
-
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.topAnchor, constant: -view.safeAreaInsets.top),
+            // 背景图：从屏幕最顶端开始，固定 276pt 高
+            heroBg.topAnchor.constraint(equalTo: view.topAnchor),
+            heroBg.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            heroBg.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            heroBg.heightAnchor.constraint(equalToConstant: 276),
+
+            heroDim.topAnchor.constraint(equalTo: view.topAnchor),
+            heroDim.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            heroDim.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            heroDim.heightAnchor.constraint(equalToConstant: 276),
+
+            pageBackground.topAnchor.constraint(equalTo: view.topAnchor, constant: 276),
+            pageBackground.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            pageBackground.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            pageBackground.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+
+            scrollView.topAnchor.constraint(equalTo: view.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
 
-            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+            contentView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            contentView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
 
+            // header 透明占位，高度与背景图一致
             header.topAnchor.constraint(equalTo: contentView.topAnchor),
             header.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             header.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            header.heightAnchor.constraint(equalToConstant: 236),
+            header.heightAnchor.constraint(equalToConstant: 276),
 
             profileInfo.topAnchor.constraint(equalTo: header.bottomAnchor),
             profileInfo.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
@@ -99,19 +142,10 @@ class UserProfileViewController: UIViewController {
     }
 
     private func createHeader(_ user: User) -> UIView {
+        // header 仅作透明占位 + 返回键容器，背景图已直接钉在 view 上
         let header = UIView()
-        header.clipsToBounds = true
+        header.backgroundColor = .clear
         header.translatesAutoresizingMaskIntoConstraints = false
-
-        let bg = UIImageView(image: UIImage(named: profileBackgroundImage(for: user)) ?? UIImage(named: "pubg_1") ?? UIImage(named: "bg_mine"))
-        bg.contentMode = .scaleAspectFill
-        bg.translatesAutoresizingMaskIntoConstraints = false
-        header.addSubview(bg)
-
-        let dim = ProfileGradientView(colors: [UIColor.black.withAlphaComponent(0.15), profileBackgroundColor.withAlphaComponent(0.95)])
-        dim.isUserInteractionEnabled = false
-        dim.translatesAutoresizingMaskIntoConstraints = false
-        header.addSubview(dim)
 
         let backButton = UIButton(type: .system)
         backButton.setImage(UIImage(systemName: "chevron.left"), for: .normal)
@@ -122,18 +156,8 @@ class UserProfileViewController: UIViewController {
         header.addSubview(backButton)
 
         NSLayoutConstraint.activate([
-            bg.topAnchor.constraint(equalTo: header.topAnchor),
-            bg.leadingAnchor.constraint(equalTo: header.leadingAnchor),
-            bg.trailingAnchor.constraint(equalTo: header.trailingAnchor),
-            bg.bottomAnchor.constraint(equalTo: header.bottomAnchor),
-
-            dim.topAnchor.constraint(equalTo: header.topAnchor),
-            dim.leadingAnchor.constraint(equalTo: header.leadingAnchor),
-            dim.trailingAnchor.constraint(equalTo: header.trailingAnchor),
-            dim.bottomAnchor.constraint(equalTo: header.bottomAnchor),
-
             backButton.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: 22),
-            backButton.topAnchor.constraint(equalTo: header.safeAreaLayoutGuide.topAnchor, constant: 28),
+            backButton.topAnchor.constraint(equalTo: header.topAnchor, constant: 56),
             backButton.widthAnchor.constraint(equalToConstant: 40),
             backButton.heightAnchor.constraint(equalToConstant: 40)
         ])
@@ -146,7 +170,7 @@ class UserProfileViewController: UIViewController {
         container.backgroundColor = profileBackgroundColor
         container.translatesAutoresizingMaskIntoConstraints = false
 
-        let avatar = UIImageView(image: UIImage(named: user.avatarImage))
+        let avatar = UIImageView(image: user.displayAvatarImage ?? UIImage(named: user.avatarImage))
         avatar.contentMode = .scaleAspectFill
         avatar.layer.cornerRadius = 45
         avatar.layer.masksToBounds = true
@@ -234,12 +258,11 @@ class UserProfileViewController: UIViewController {
 
         let isCurrentUser = user.id == UserManager.shared.currentUser?.id
         let primary = UIButton(type: .system)
-        primary.setTitle(isCurrentUser ? "Edit Profile" : (user.isFollowing ? "Following" : "Follow"), for: .normal)
-        primary.setTitleColor(isCurrentUser ? .black : .white, for: .normal)
         primary.titleLabel?.font = Theme.Fonts.bold(14)
-        primary.backgroundColor = isCurrentUser ? Theme.Colors.primaryYellow : (user.isFollowing ? UIColor(hex: "#343545") : UIColor(hex: "#5A86FF"))
         primary.layer.cornerRadius = 21
         primary.addTarget(self, action: isCurrentUser ? #selector(editProfileTapped) : #selector(followTapped), for: .touchUpInside)
+        primaryActionButton = primary
+        updatePrimaryActionButton(primary, for: user)
 
         let chat = UIButton(type: .system)
         chat.setTitle(isCurrentUser ? "My Chat" : "Chat", for: .normal)
@@ -310,10 +333,13 @@ class UserProfileViewController: UIViewController {
     }
 
     private func profileBackgroundImage(for user: User) -> String {
+        if user.id == UserManager.shared.currentUser?.id, UIImage(named: "ic_mine_backpic") != nil {
+            return "ic_mine_backpic"
+        }
         if UIImage(named: user.backgroundImage) != nil, user.backgroundImage != "bg_mine" {
             return user.backgroundImage
         }
-        let backgrounds = ["bg_1", "bg_2", "bg_3", "bg_4", "bg_5", "pubg_1", "minecraft_1", "fortnite_1", "thesims_1", "bg_room_background"]
+        let backgrounds = ["ic_mine_backpic", "minecraft_1", "fortnite_1", "thesims_1", "bg_room_background"]
         return backgrounds[abs(user.id) % backgrounds.count]
     }
 
@@ -328,22 +354,22 @@ class UserProfileViewController: UIViewController {
     }
 
     private func makeTextPill(text: String) -> UIView {
-        let pill = ProfileGradientView(colors: [UIColor(hex: "#73D0FF"), UIColor(hex: "#5A86FF")])
-        pill.layer.cornerRadius = 19
+        let pill = ProfileGradientView(colors: [UIColor(hex: "#65C8FF"), UIColor(hex: "#4B78FF")])
+        pill.layer.cornerRadius = 13
         pill.clipsToBounds = true
         pill.translatesAutoresizingMaskIntoConstraints = false
 
         let label = UILabel()
         label.text = text
-        label.font = Theme.Fonts.medium(13)
+        label.font = Theme.Fonts.bold(11)
         label.textColor = .white
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         pill.addSubview(label)
 
         NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: pill.leadingAnchor, constant: 14),
-            label.trailingAnchor.constraint(equalTo: pill.trailingAnchor, constant: -14),
+            label.leadingAnchor.constraint(equalTo: pill.leadingAnchor, constant: 10),
+            label.trailingAnchor.constraint(equalTo: pill.trailingAnchor, constant: -10),
             label.centerYAnchor.constraint(equalTo: pill.centerYAnchor)
         ])
         return pill
@@ -403,12 +429,33 @@ class UserProfileViewController: UIViewController {
         }
     }
 
+    private func refreshUserState() {
+        guard let user else { return }
+        let syncedUser = MockDataManager.shared.userWithSyncedFollowState(user)
+        self.user = syncedUser
+        if let primaryActionButton {
+            updatePrimaryActionButton(primaryActionButton, for: syncedUser)
+        }
+    }
+
+    private func updatePrimaryActionButton(_ button: UIButton, for user: User) {
+        let isCurrentUser = user.id == UserManager.shared.currentUser?.id
+        let isFollowing = MockDataManager.shared.isFollowing(userId: user.id)
+        button.setTitle(isCurrentUser ? "Edit Profile" : (isFollowing ? "Following" : "Follow"), for: .normal)
+        button.setTitleColor(isCurrentUser ? .black : .white, for: .normal)
+        button.backgroundColor = isCurrentUser ? Theme.Colors.primaryYellow : (isFollowing ? UIColor(hex: "#343545") : UIColor(hex: "#5A86FF"))
+    }
+
     @objc private func editProfileTapped() {
         pushAppViewController(EditProfileViewController(), animated: true)
     }
 
     @objc private func followTapped() {
-        showToast("Follow status updated")
+        guard let user else { return }
+        let nextState = !MockDataManager.shared.isFollowing(userId: user.id)
+        MockDataManager.shared.setFollowing(userId: user.id, isFollowing: nextState)
+        refreshUserState()
+        showToast(nextState ? "Followed" : "Unfollowed")
     }
 
     @objc private func chatTapped() {
@@ -416,7 +463,7 @@ class UserProfileViewController: UIViewController {
         let vc = ChatViewController()
         vc.chatUser = Message(
             userId: user.id,
-            avatarImage: user.avatarImage,
+            avatarImage: user.displayAvatar,
             name: user.name,
             lastMessage: "",
             time: "",
@@ -434,11 +481,12 @@ class UserProfileViewController: UIViewController {
 private final class ProfileGradientView: UIView {
     private let gradientLayer = CAGradientLayer()
 
-    init(colors: [UIColor]) {
+    init(colors: [UIColor], startPoint: CGPoint = CGPoint(x: 0, y: 0.5), endPoint: CGPoint = CGPoint(x: 1, y: 0.5), locations: [NSNumber]? = nil) {
         super.init(frame: .zero)
         layer.insertSublayer(gradientLayer, at: 0)
-        gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
-        gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
+        gradientLayer.startPoint = startPoint
+        gradientLayer.endPoint = endPoint
+        gradientLayer.locations = locations
         gradientLayer.colors = colors.map { $0.cgColor }
     }
 

@@ -1,4 +1,5 @@
 import UIKit
+import AVFoundation
 
 /// 语音房详情页 - 对应 Android GameMic 的 VoiceRoomActivity
 /// 布局（从上到下）：
@@ -22,7 +23,7 @@ class VoiceRoomViewController: UIViewController {
     /// 当前用户麦位索引（-1=未上麦）
     private var currentUserMicIndex: Int = -1
     /// 麦克风开关状态
-    private var isMicOn: Bool = true
+    private var isMicOn: Bool = false
     /// 音量开关状态
     private var isVolumeOn: Bool = true
     /// 是否已收藏
@@ -73,7 +74,7 @@ class VoiceRoomViewController: UIViewController {
     private let settingButton: UIButton = {
         let btn = UIButton(type: .custom)
         btn.setImage(UIImage(systemName: "gearshape.fill"), for: .normal)
-        btn.tintColor = Theme.Colors.primaryYellow
+        btn.tintColor = .white
         btn.translatesAutoresizingMaskIntoConstraints = false
         return btn
     }()
@@ -119,7 +120,7 @@ class VoiceRoomViewController: UIViewController {
     /// 麦克风按钮（对应 Android ivMic）
     private let micButton: UIButton = {
         let btn = UIButton(type: .custom)
-        btn.setImage(UIImage(named: "ic_room_say"), for: .normal)
+        btn.setImage(UIImage(named: "ic_room_unsay"), for: .normal)
         btn.translatesAutoresizingMaskIntoConstraints = false
         return btn
     }()
@@ -143,8 +144,8 @@ class VoiceRoomViewController: UIViewController {
     /// 功能菜单按钮（对应 Android ivMenu）
     private let menuButton: UIButton = {
         let btn = UIButton(type: .custom)
-        btn.setImage(UIImage(systemName: "ellipsis.circle.fill"), for: .normal)
-        btn.tintColor = Theme.Colors.primaryYellow
+        btn.setImage(UIImage(named: "ic_room_function"), for: .normal)
+        btn.imageView?.contentMode = .scaleAspectFit
         btn.translatesAutoresizingMaskIntoConstraints = false
         return btn
     }()
@@ -161,6 +162,8 @@ class VoiceRoomViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        navigationItem.hidesBackButton = true
+        navigationItem.leftBarButtonItem = nil
         view.backgroundColor = Theme.Colors.darkBackground
         setupUI()
         setupActions()
@@ -170,12 +173,14 @@ class VoiceRoomViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        navigationController?.setNavigationBarHidden(true, animated: animated)
+        navigationController?.setNavigationBarHidden(true, animated: false)
+        navigationController?.interactivePopGestureRecognizer?.isEnabled = false
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         navigationController?.setNavigationBarHidden(false, animated: animated)
+        navigationController?.interactivePopGestureRecognizer?.isEnabled = true
     }
 
     // MARK: - 界面搭建
@@ -202,11 +207,8 @@ class VoiceRoomViewController: UIViewController {
 
         // 底部控制栏
         view.addSubview(bottomBar)
-        bottomBar.addSubview(micButton)
-        bottomBar.addSubview(volumeButton)
-        bottomBar.addSubview(giftButton)
-        bottomBar.addSubview(menuButton)
-        bottomBar.addSubview(chatInputButton)
+        let bottomButtonStack = makeBottomButtonStack()
+        bottomBar.addSubview(bottomButtonStack)
 
         NSLayoutConstraint.activate([
             // 头部
@@ -263,32 +265,35 @@ class VoiceRoomViewController: UIViewController {
             bottomBar.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
             bottomBar.heightAnchor.constraint(equalToConstant: 60),
 
-            // 底部按钮布局（左：麦克风+音量 | 右：礼物+聊天）
-            micButton.leadingAnchor.constraint(equalTo: bottomBar.leadingAnchor, constant: 16),
-            micButton.centerYAnchor.constraint(equalTo: bottomBar.centerYAnchor),
-            micButton.widthAnchor.constraint(equalToConstant: 44),
-            micButton.heightAnchor.constraint(equalToConstant: 44),
-
-            volumeButton.leadingAnchor.constraint(equalTo: micButton.trailingAnchor, constant: 16),
-            volumeButton.centerYAnchor.constraint(equalTo: bottomBar.centerYAnchor),
-            volumeButton.widthAnchor.constraint(equalToConstant: 44),
-            volumeButton.heightAnchor.constraint(equalToConstant: 44),
-
-            chatInputButton.trailingAnchor.constraint(equalTo: bottomBar.trailingAnchor, constant: -16),
-            chatInputButton.centerYAnchor.constraint(equalTo: bottomBar.centerYAnchor),
-            chatInputButton.widthAnchor.constraint(equalToConstant: 44),
-            chatInputButton.heightAnchor.constraint(equalToConstant: 44),
-
-            menuButton.trailingAnchor.constraint(equalTo: chatInputButton.leadingAnchor, constant: -16),
-            menuButton.centerYAnchor.constraint(equalTo: bottomBar.centerYAnchor),
-            menuButton.widthAnchor.constraint(equalToConstant: 44),
-            menuButton.heightAnchor.constraint(equalToConstant: 44),
-
-            giftButton.trailingAnchor.constraint(equalTo: menuButton.leadingAnchor, constant: -16),
-            giftButton.centerYAnchor.constraint(equalTo: bottomBar.centerYAnchor),
-            giftButton.widthAnchor.constraint(equalToConstant: 44),
-            giftButton.heightAnchor.constraint(equalToConstant: 44),
+            bottomButtonStack.leadingAnchor.constraint(equalTo: bottomBar.leadingAnchor, constant: 8),
+            bottomButtonStack.trailingAnchor.constraint(equalTo: bottomBar.trailingAnchor, constant: -8),
+            bottomButtonStack.topAnchor.constraint(equalTo: bottomBar.topAnchor),
+            bottomButtonStack.bottomAnchor.constraint(equalTo: bottomBar.bottomAnchor),
         ])
+    }
+
+    private func makeBottomButtonStack() -> UIStackView {
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.distribution = .fillEqually
+        stack.spacing = 0
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        [micButton, volumeButton, giftButton, menuButton, chatInputButton].forEach { button in
+            let container = UIView()
+            container.translatesAutoresizingMaskIntoConstraints = false
+            container.addSubview(button)
+            stack.addArrangedSubview(container)
+
+            NSLayoutConstraint.activate([
+                button.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+                button.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                button.widthAnchor.constraint(equalToConstant: 44),
+                button.heightAnchor.constraint(equalToConstant: 44)
+            ])
+        }
+
+        return stack
     }
 
     // MARK: - 麦位网格搭建（4列x2行，对应 Android grid_mics）
@@ -296,7 +301,6 @@ class VoiceRoomViewController: UIViewController {
     /// 创建8个麦位视图
     private func setupMicSeats() {
         let columns = 4
-        let rows = 2
         let spacing: CGFloat = 8
 
         for i in 0..<8 {
@@ -378,14 +382,28 @@ class VoiceRoomViewController: UIViewController {
             return
         }
         let vc = RoomSettingsViewController()
+        vc.room = room
+        vc.onRoomUpdated = { [weak self] updatedRoom in
+            guard let self else { return }
+            self.room = updatedRoom
+            self.roomNameLabel.text = updatedRoom.roomName
+        }
         pushAppViewController(vc, animated: true)
     }
 
     @objc private func menuTapped() {
-        let alert = UIAlertController(title: "Room Menu", message: nil, preferredStyle: .actionSheet)
+        let alert = UIAlertController(title: "Room Function", message: nil, preferredStyle: .actionSheet)
         alert.addAction(UIAlertAction(title: "Clear Messages", style: .destructive) { [weak self] _ in
             self?.messages.removeAll()
             self?.messageTableView.reloadData()
+        })
+        alert.addAction(UIAlertAction(title: "Copy Room ID", style: .default) { [weak self] _ in
+            guard let roomId = self?.room?.roomId else { return }
+            UIPasteboard.general.string = roomId
+            self?.showToast("Room ID copied")
+        })
+        alert.addAction(UIAlertAction(title: "Room Rules", style: .default) { [weak self] _ in
+            self?.showToast("Be respectful, keep voice chat friendly")
         })
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         present(alert, animated: true)
@@ -393,9 +411,45 @@ class VoiceRoomViewController: UIViewController {
 
     /// 麦克风开关切换（对应 Android ivMic toggle）
     @objc private func micToggleTapped() {
-        isMicOn.toggle()
-        let imageName = isMicOn ? "ic_room_say" : "ic_room_unsay"
-        micButton.setImage(UIImage(named: imageName), for: .normal)
+        if isMicOn {
+            // 关麦不需要权限
+            isMicOn = false
+            micButton.setImage(UIImage(named: "ic_room_unsay"), for: .normal)
+        } else {
+            // 开麦需要检查录音权限
+            let status = AVAudioSession.sharedInstance().recordPermission
+            switch status {
+            case .granted:
+                isMicOn = true
+                micButton.setImage(UIImage(named: "ic_room_say"), for: .normal)
+            case .undetermined:
+                AVAudioSession.sharedInstance().requestRecordPermission { [weak self] granted in
+                    DispatchQueue.main.async {
+                        if granted {
+                            self?.isMicOn = true
+                            self?.micButton.setImage(UIImage(named: "ic_room_say"), for: .normal)
+                        } else {
+                            self?.showToast("Microphone permission denied")
+                        }
+                    }
+                }
+            case .denied:
+                let alert = UIAlertController(
+                    title: "Microphone Access",
+                    message: "Please enable microphone permission in Settings to use voice chat.",
+                    preferredStyle: .alert
+                )
+                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+                alert.addAction(UIAlertAction(title: "Settings", style: .default) { _ in
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                })
+                present(alert, animated: true)
+            @unknown default:
+                break
+            }
+        }
     }
 
     /// 音量开关切换（对应 Android ivVolume toggle）
@@ -407,14 +461,17 @@ class VoiceRoomViewController: UIViewController {
 
     /// 礼物按钮点击 - 弹出礼物选择器（对应 Android GiftSelectorDialog）
     @objc private func giftTapped() {
+        presentGiftSelector(receiverName: room?.hostName)
+    }
+
+    private func presentGiftSelector(receiverName: String?) {
         let giftVC = GiftSelectorViewController()
         giftVC.onGiftSend = { [weak self] gift, count in
             guard let self = self else { return }
             let senderName = UserManager.shared.currentUser?.name ?? "You"
-            let receiverName = self.room?.hostName ?? "Host"
             let message = RoomMessage.createGift(
                 senderName: senderName,
-                receiverName: receiverName,
+                receiverName: receiverName ?? self.room?.hostName ?? "Host",
                 giftImage: gift.imageName,
                 giftCount: count
             )
@@ -454,38 +511,16 @@ class VoiceRoomViewController: UIViewController {
         guard let seatIndex = gesture.view?.tag else { return }
 
         if seatIndex == 0 {
-            let hostName = room?.hostName ?? "Host"
-            let alert = UIAlertController(title: hostName, message: "Room Host", preferredStyle: .actionSheet)
-            alert.addAction(UIAlertAction(title: "Visit Homepage", style: .default))
-            alert.addAction(UIAlertAction(title: "Send Gift", style: .default) { [weak self] _ in
-                self?.giftTapped()
-            })
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-            present(alert, animated: true)
+            if let host = userForSeat(seatIndex) {
+                showUserActionSheet(user: host, seatIndex: seatIndex)
+            }
             return
         }
 
         let micIndex = seatIndex - 1 // micUsers 数组 index（0-6 对应 mic2-mic8）
 
         if let micUser = micUsers[micIndex] {
-            // 已有人 → 自己只能下麦；房主才能踢其他人（对应 Android UserProfileDialog）
-            let currentUserId = UserManager.shared.currentUser?.id ?? MockDataManager.shared.users[0].id
-            let isCurrentUserMic = micUser.id == currentUserId || currentUserMicIndex == seatIndex
-            let alert = UIAlertController(title: micUser.name, message: "On Mic \(seatIndex + 1)", preferredStyle: .actionSheet)
-            if isCurrentUserMic {
-                alert.addAction(UIAlertAction(title: "Leave Mic", style: .destructive) { [weak self] _ in
-                    self?.micUsers[micIndex] = nil
-                    self?.currentUserMicIndex = -1
-                    self?.updateMicSeatUI(at: seatIndex)
-                })
-            } else if isOwner {
-                alert.addAction(UIAlertAction(title: "Kick Out", style: .destructive) { [weak self] _ in
-                    self?.micUsers[micIndex] = nil
-                    self?.updateMicSeatUI(at: seatIndex)
-                })
-            }
-            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-            present(alert, animated: true)
+            showUserActionSheet(user: micUser, seatIndex: seatIndex)
         } else if micLockedStatus[micIndex] {
             // 已锁定
             if isOwner {
@@ -503,6 +538,12 @@ class VoiceRoomViewController: UIViewController {
                 showToast("This microphone is locked")
             }
         } else {
+            // 房主已经在 1 号麦，不允许再占普通麦位
+            if isOwner {
+                showToast("You are already on the host mic")
+                return
+            }
+
             // 空位 → 未上麦直接上麦；已上麦则确认后换麦位
             if currentUserMicIndex != -1 {
                 let alert = UIAlertController(
@@ -535,6 +576,86 @@ class VoiceRoomViewController: UIViewController {
         }
     }
 
+    private func userForSeat(_ seatIndex: Int) -> User? {
+        if seatIndex == 0 {
+            if let room,
+               let host = MockDataManager.shared.users.first(where: { $0.name == room.hostName || $0.avatarImage == room.hostAvatarImage }) {
+                return MockDataManager.shared.userWithSyncedFollowState(host)
+            }
+            return MockDataManager.shared.users.first
+        }
+        let micIndex = seatIndex - 1
+        guard micUsers.indices.contains(micIndex) else { return nil }
+        return micUsers[micIndex].map { MockDataManager.shared.userWithSyncedFollowState($0) }
+    }
+
+    private func showUserActionSheet(user: User, seatIndex: Int) {
+        let user = MockDataManager.shared.userWithSyncedFollowState(user)
+        let currentUserId = UserManager.shared.currentUser?.id ?? MockDataManager.shared.users[0].id
+        let isCurrentUser = user.id == currentUserId
+        let isCurrentUserMic = seatIndex > 0 && (isCurrentUser || currentUserMicIndex == seatIndex)
+        let alert = UIAlertController(title: user.name, message: seatIndex == 0 ? "Room Host" : "On Mic \(seatIndex + 1)", preferredStyle: .actionSheet)
+
+        alert.addAction(UIAlertAction(title: "Visit Homepage", style: .default) { [weak self] _ in
+            let vc = UserProfileViewController()
+            vc.user = user
+            self?.pushAppViewController(vc, animated: true)
+        })
+
+        if !isCurrentUser {
+            let isFollowing = MockDataManager.shared.isFollowing(userId: user.id)
+            alert.addAction(UIAlertAction(title: isFollowing ? "Following" : "Follow", style: .default) { [weak self] _ in
+                let nextState = !MockDataManager.shared.isFollowing(userId: user.id)
+                MockDataManager.shared.setFollowing(userId: user.id, isFollowing: nextState)
+                self?.showToast(nextState ? "Followed" : "Unfollowed")
+            })
+
+            alert.addAction(UIAlertAction(title: "Send Message", style: .default) { [weak self] _ in
+                let vc = ChatViewController()
+                vc.chatUser = Message(
+                    userId: user.id,
+                    avatarImage: user.displayAvatar,
+                    name: user.name,
+                    lastMessage: "",
+                    time: "",
+                    unreadCount: 0,
+                    timestamp: Date().timeIntervalSince1970,
+                    gender: user.gender,
+                    countryFlag: "",
+                    level: user.level,
+                    bio: user.bio
+                )
+                self?.pushAppViewController(vc, animated: true)
+            })
+
+            alert.addAction(UIAlertAction(title: "Send Gift", style: .default) { [weak self] _ in
+                self?.presentGiftSelector(receiverName: user.name)
+            })
+        }
+
+        if isCurrentUserMic {
+            alert.addAction(UIAlertAction(title: "Leave Mic", style: .destructive) { [weak self] _ in
+                guard let self = self else { return }
+                let micIndex = seatIndex - 1
+                guard self.micUsers.indices.contains(micIndex) else { return }
+                self.micUsers[micIndex] = nil
+                self.currentUserMicIndex = -1
+                self.updateMicSeatUI(at: seatIndex)
+            })
+        } else if isOwner, seatIndex > 0 {
+            alert.addAction(UIAlertAction(title: "Kick Out", style: .destructive) { [weak self] _ in
+                guard let self = self else { return }
+                let micIndex = seatIndex - 1
+                guard self.micUsers.indices.contains(micIndex) else { return }
+                self.micUsers[micIndex] = nil
+                self.updateMicSeatUI(at: seatIndex)
+            })
+        }
+
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        present(alert, animated: true)
+    }
+
     // MARK: - 数据加载
 
     /// 加载房间数据到 UI
@@ -542,7 +663,11 @@ class VoiceRoomViewController: UIViewController {
         guard let room = room else { return }
         roomNameLabel.text = room.roomName
         roomIdLabel.text = "ID: \(room.roomId)"
-        roomCoverView.image = UIImage(named: room.coverImage)
+        if let coverUri = room.coverUri {
+            roomCoverView.image = UIImage(contentsOfFile: coverUri) ?? UIImage(named: room.coverImage)
+        } else {
+            roomCoverView.image = UIImage(named: room.coverImage)
+        }
         isFavorited = room.isCollected
         let favImageName = isFavorited ? "ic_room_favorite" : "ic_room_unfavorite"
         favoriteButton.setImage(UIImage(named: favImageName), for: .normal)
@@ -556,6 +681,14 @@ class VoiceRoomViewController: UIViewController {
             isEmpty: false,
             isLocked: false
         )
+
+        if MockDataManager.shared.isUserCreatedRoom(room) {
+            micUsers = Array(repeating: nil, count: 7)
+            for index in 1..<micSeatViews.count {
+                updateMicSeatUI(at: index)
+            }
+            return
+        }
 
         // Mock: 随机给几个麦位放人，避免重复占位
         let mockUsers = MockDataManager.shared.users

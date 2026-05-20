@@ -105,10 +105,10 @@ extension FansViewController: UITableViewDataSource, UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: UserListCell.reuseId, for: indexPath) as! UserListCell
-        let user = users[indexPath.row]
+        let user = MockDataManager.shared.userWithSyncedFollowState(users[indexPath.row])
         cell.configure(with: user, listType: listType)
         cell.onFollowTap = { [weak self] in
-            self?.updateFollowState(for: user.id, isFollowing: !user.isFollowing)
+            self?.updateFollowState(for: user.id, isFollowing: !MockDataManager.shared.isFollowing(userId: user.id))
         }
         cell.onChatTap = { [weak self] in
             self?.openChat(with: user)
@@ -224,7 +224,7 @@ class UserListCell: UITableViewCell {
     }
 
     func configure(with user: User, listType: FansViewController.ListType) {
-        avatarView.image = UIImage(named: user.avatarImage)
+        avatarView.image = user.displayAvatarImage ?? UIImage(named: user.avatarImage)
         nameLabel.text = user.name
         bioLabel.text = user.bio
 

@@ -46,14 +46,19 @@ class RoomCell: UITableViewCell {
         return label
     }()
 
-    /// 游戏分类标签（如 "PUBG"，有色背景）
+    /// 游戏分类标签（如 "PUBG"，纯色胶囊背景，避免渐变 layer 截断）
+    private let gameTagContainer: UIView = {
+        let v = UIView()
+        v.layer.cornerRadius = 10
+        v.layer.masksToBounds = true
+        v.translatesAutoresizingMaskIntoConstraints = false
+        return v
+    }()
+
     private let gameTagLabel: UILabel = {
         let label = UILabel()
         label.font = Theme.Fonts.medium(11)
-        label.textColor = Theme.Colors.primaryYellow
-        label.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.15)
-        label.layer.cornerRadius = 8
-        label.layer.masksToBounds = true
+        label.textColor = Theme.Colors.darkerBackground
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -99,7 +104,8 @@ class RoomCell: UITableViewCell {
         containerView.addSubview(coverImageView)
         containerView.addSubview(titleLabel)
         containerView.addSubview(hotLabel)
-        containerView.addSubview(gameTagLabel)
+        containerView.addSubview(gameTagContainer)
+        gameTagContainer.addSubview(gameTagLabel)
         containerView.addSubview(descriptionLabel)
         containerView.addSubview(memberCountLabel)
 
@@ -121,15 +127,19 @@ class RoomCell: UITableViewCell {
             hotLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 12),
             hotLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
 
-            gameTagLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 6),
-            gameTagLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            gameTagLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 50),
-            gameTagLabel.heightAnchor.constraint(equalToConstant: 20),
+            gameTagContainer.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 6),
+            gameTagContainer.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            gameTagContainer.heightAnchor.constraint(equalToConstant: 20),
 
-            memberCountLabel.centerYAnchor.constraint(equalTo: gameTagLabel.centerYAnchor),
-            memberCountLabel.leadingAnchor.constraint(equalTo: gameTagLabel.trailingAnchor, constant: 8),
+            gameTagLabel.topAnchor.constraint(equalTo: gameTagContainer.topAnchor),
+            gameTagLabel.leadingAnchor.constraint(equalTo: gameTagContainer.leadingAnchor, constant: 10),
+            gameTagLabel.trailingAnchor.constraint(equalTo: gameTagContainer.trailingAnchor, constant: -10),
+            gameTagLabel.bottomAnchor.constraint(equalTo: gameTagContainer.bottomAnchor),
 
-            descriptionLabel.topAnchor.constraint(equalTo: gameTagLabel.bottomAnchor, constant: 6),
+            memberCountLabel.centerYAnchor.constraint(equalTo: gameTagContainer.centerYAnchor),
+            memberCountLabel.leadingAnchor.constraint(equalTo: gameTagContainer.trailingAnchor, constant: 8),
+
+            descriptionLabel.topAnchor.constraint(equalTo: gameTagContainer.bottomAnchor, constant: 6),
             descriptionLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             descriptionLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
         ])
@@ -141,10 +151,30 @@ class RoomCell: UITableViewCell {
     func configure(with room: VoiceRoom) {
         titleLabel.text = room.title
         hotLabel.text = "🔥 \(room.hotCountText)"
-        gameTagLabel.text = "  \(room.gameTag)  "
+        gameTagLabel.text = room.gameTag
+        gameTagContainer.backgroundColor = tagColor(for: room.gameTag)
         descriptionLabel.text = room.description
         memberCountLabel.text = "👥 \(room.memberCount) online"
         // 加载真实封面图片（对应 Android coverResId）
-        coverImageView.image = UIImage(named: room.coverImage)
+        if let coverUri = room.coverUri {
+            coverImageView.image = UIImage(contentsOfFile: coverUri) ?? UIImage(named: room.coverImage)
+        } else {
+            coverImageView.image = UIImage(named: room.coverImage)
+        }
+    }
+
+    private func tagColor(for tag: String) -> UIColor {
+        switch tag {
+        case "PUBG":
+            return UIColor(hex: "#FFB800")
+        case "Minecraft":
+            return UIColor(hex: "#45D26A")
+        case "Fortnite":
+            return UIColor(hex: "#7C5CFF")
+        case "TheSims":
+            return UIColor(hex: "#20C8FF")
+        default:
+            return Theme.Colors.primaryYellow
+        }
     }
 }

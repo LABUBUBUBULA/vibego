@@ -78,16 +78,60 @@ class WelcomeViewController: UIViewController {
         return btn
     }()
 
-    /// 协议文字（对应 Android tv_terms + tv_privacy）
-    private let termsLabel: UILabel = {
+    /// 协议文字容器：拆成普通文字 + 两个按钮，保证登录前可分别打开服务政策/隐私协议。
+    private let agreementStack: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.alignment = .center
+        stack.spacing = 2
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+
+    private let agreementPrefixLabel: UILabel = {
         let label = UILabel()
-        label.text = "I agree to Terms of Service and Privacy Policy"
+        label.text = "I agree to"
         label.font = Theme.Fonts.regular(12)
         label.textColor = Theme.Colors.textSecondary
-        label.textAlignment = .center
-        label.numberOfLines = 2
-        label.translatesAutoresizingMaskIntoConstraints = false
         return label
+    }()
+
+    private let termsButton: UIButton = {
+        let btn = UIButton(type: .system)
+        // 协议链接用黄色 + 下划线，和普通说明文字明显区分。
+        let title = NSAttributedString(
+            string: "Terms",
+            attributes: [
+                .font: Theme.Fonts.medium(12),
+                .foregroundColor: Theme.Colors.primaryYellow,
+                .underlineStyle: NSUnderlineStyle.single.rawValue
+            ]
+        )
+        btn.setAttributedTitle(title, for: .normal)
+        return btn
+    }()
+
+    private let agreementAndLabel: UILabel = {
+        let label = UILabel()
+        label.text = "and"
+        label.font = Theme.Fonts.regular(12)
+        label.textColor = Theme.Colors.textSecondary
+        return label
+    }()
+
+    private let privacyButton: UIButton = {
+        let btn = UIButton(type: .system)
+        // 协议链接用黄色 + 下划线，提示用户这里可点击进入详情。
+        let title = NSAttributedString(
+            string: "Privacy Policy",
+            attributes: [
+                .font: Theme.Fonts.medium(12),
+                .foregroundColor: Theme.Colors.primaryYellow,
+                .underlineStyle: NSUnderlineStyle.single.rawValue
+            ]
+        )
+        btn.setAttributedTitle(title, for: .normal)
+        return btn
     }()
 
     // MARK: - 生命周期
@@ -109,7 +153,12 @@ class WelcomeViewController: UIViewController {
         view.addSubview(quickRegisterButton)
         view.addSubview(emailSignInButton)
         view.addSubview(checkboxButton)
-        view.addSubview(termsLabel)
+        view.addSubview(agreementStack)
+
+        agreementStack.addArrangedSubview(agreementPrefixLabel)
+        agreementStack.addArrangedSubview(termsButton)
+        agreementStack.addArrangedSubview(agreementAndLabel)
+        agreementStack.addArrangedSubview(privacyButton)
 
         NSLayoutConstraint.activate([
             // Logo（居中偏上）
@@ -142,9 +191,9 @@ class WelcomeViewController: UIViewController {
             checkboxButton.widthAnchor.constraint(equalToConstant: 24),
             checkboxButton.heightAnchor.constraint(equalToConstant: 24),
 
-            termsLabel.centerYAnchor.constraint(equalTo: checkboxButton.centerYAnchor),
-            termsLabel.leadingAnchor.constraint(equalTo: checkboxButton.trailingAnchor, constant: 8),
-            termsLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40)
+            agreementStack.centerYAnchor.constraint(equalTo: checkboxButton.centerYAnchor),
+            agreementStack.leadingAnchor.constraint(equalTo: checkboxButton.trailingAnchor, constant: 8),
+            agreementStack.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -24)
         ])
     }
 
@@ -154,12 +203,24 @@ class WelcomeViewController: UIViewController {
         quickRegisterButton.addTarget(self, action: #selector(quickRegisterTapped), for: .touchUpInside)
         emailSignInButton.addTarget(self, action: #selector(emailSignInTapped), for: .touchUpInside)
         checkboxButton.addTarget(self, action: #selector(checkboxTapped), for: .touchUpInside)
+        termsButton.addTarget(self, action: #selector(termsTapped), for: .touchUpInside)
+        privacyButton.addTarget(self, action: #selector(privacyTapped), for: .touchUpInside)
     }
 
     /// 勾选框点击 - 切换同意状态（对应 Android checkbox toggle）
     @objc private func checkboxTapped() {
         isAgreed.toggle()
         checkboxButton.isSelected = isAgreed
+    }
+
+    /// 登录前可查看服务政策，不要求先勾选协议。
+    @objc private func termsTapped() {
+        navigationController?.pushViewController(LegalTextViewController(type: .terms), animated: true)
+    }
+
+    /// 登录前可查看隐私协议，不要求先勾选协议。
+    @objc private func privacyTapped() {
+        navigationController?.pushViewController(LegalTextViewController(type: .privacy), animated: true)
     }
 
     /// 快速注册点击（对应 Android Quick Register → quickRegister → MainActivity）

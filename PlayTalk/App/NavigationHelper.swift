@@ -1,6 +1,14 @@
 import UIKit
 
-final class AppNavigationController: UINavigationController, UINavigationControllerDelegate {
+final class AppNavigationController: UINavigationController, UINavigationControllerDelegate, UIGestureRecognizerDelegate {
+
+    private lazy var fullScreenPanGesture: UIPanGestureRecognizer = {
+        let gesture = UIPanGestureRecognizer()
+        gesture.maximumNumberOfTouches = 1
+        gesture.delegate = self
+        return gesture
+    }()
+
     override func viewDidLoad() {
         super.viewDidLoad()
         delegate = self
@@ -14,22 +22,53 @@ final class AppNavigationController: UINavigationController, UINavigationControl
         navigationBar.scrollEdgeAppearance = appearance
         navigationBar.compactAppearance = appearance
         navigationBar.tintColor = .white
+
+        setupFullScreenPopGesture()
+    }
+
+    private func setupFullScreenPopGesture() {
+        guard let targets = interactivePopGestureRecognizer?.value(forKey: "targets") as? [AnyObject] else { return }
+        fullScreenPanGesture.setValue(targets, forKey: "targets")
+        view.addGestureRecognizer(fullScreenPanGesture)
+        interactivePopGestureRecognizer?.isEnabled = false
     }
 
     func navigationController(_ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool) {
-        let isMainTabs = viewController is MainTabBarController
-        setNavigationBarHidden(isMainTabs, animated: animated)
+        let shouldHide = viewController is MainTabBarController
+            || viewController is UserProfileViewController
+        setNavigationBarHidden(shouldHide, animated: animated)
+    }
+
+    // MARK: - UIGestureRecognizerDelegate
+
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard viewControllers.count > 1 else { return false }
+        guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return true }
+        let velocity = pan.velocity(in: view)
+        // 只响应向右滑动，且水平速度大于垂直速度
+        return velocity.x > 0 && abs(velocity.x) > abs(velocity.y)
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return false
     }
 }
 
 extension UIViewController {
     func makeAppBackButton(action: Selector) -> UIBarButtonItem {
         let button = UIButton(type: .system)
-        button.setImage(UIImage(named: "ic_back")?.withRenderingMode(.alwaysTemplate), for: .normal)
+        // 缩放图片到 14x14 避免 Configuration 渲染原始尺寸
+        let rawImage = UIImage(named: "ic_back")?.withRenderingMode(.alwaysTemplate)
+        let targetSize = CGSize(width: 14, height: 14)
+        let resized = UIGraphicsImageRenderer(size: targetSize).image { _ in
+            rawImage?.draw(in: CGRect(origin: .zero, size: targetSize))
+        }.withRenderingMode(.alwaysTemplate)
+        var config = UIButton.Configuration.plain()
+        config.image = resized
+        config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 14)
+        button.configuration = config
         button.tintColor = .white
-        button.frame = CGRect(x: 0, y: 0, width: 32, height: 32)
-        button.imageEdgeInsets = UIEdgeInsets(top: 6, left: 2, bottom: 6, right: 10)
-        button.contentHorizontalAlignment = .left
+        button.frame = CGRect(x: 0, y: 0, width: 32, height: 44)
         button.addTarget(self, action: action, for: .touchUpInside)
         return UIBarButtonItem(customView: button)
     }

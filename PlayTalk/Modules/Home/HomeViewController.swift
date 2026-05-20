@@ -16,6 +16,15 @@ class HomeViewController: UIViewController {
 
     // MARK: - UI 组件
 
+    private let titleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Voice Game"
+        label.font = Theme.Fonts.bold(28)
+        label.textColor = Theme.Colors.textPrimary
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
     private let createRoomButton: UIButton = {
         let btn = UIButton(type: .system)
         btn.setImage(UIImage(systemName: "plus.circle.fill"), for: .normal)
@@ -89,9 +98,9 @@ class HomeViewController: UIViewController {
     private lazy var categoryCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
-        layout.minimumInteritemSpacing = 12
+        layout.minimumLineSpacing = 14
+        layout.minimumInteritemSpacing = 14
         layout.sectionInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
-        layout.estimatedItemSize = UICollectionViewFlowLayout.automaticSize
 
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .clear
@@ -111,9 +120,17 @@ class HomeViewController: UIViewController {
         tv.delegate = self
         tv.dataSource = self
         tv.register(RoomCell.self, forCellReuseIdentifier: RoomCell.reuseId)
+        tv.refreshControl = refreshControl
         tv.translatesAutoresizingMaskIntoConstraints = false
         tv.contentInset = UIEdgeInsets(top: 8, left: 0, bottom: 16, right: 0)
         return tv
+    }()
+
+    private lazy var refreshControl: UIRefreshControl = {
+        let control = UIRefreshControl()
+        control.tintColor = Theme.Colors.primaryYellow
+        control.addTarget(self, action: #selector(refreshRooms), for: .valueChanged)
+        return control
     }()
 
     // MARK: - 生命周期
@@ -137,6 +154,7 @@ class HomeViewController: UIViewController {
 
     private func setupUI() {
         let headerButtons = makeHeaderButtonStack()
+        view.addSubview(titleLabel)
         view.addSubview(headerButtons)
         view.addSubview(categoryCollectionView)
         view.addSubview(roomTableView)
@@ -147,7 +165,11 @@ class HomeViewController: UIViewController {
         roomFloatView.addSubview(roomFloatCloseButton)
 
         NSLayoutConstraint.activate([
-            headerButtons.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            titleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: headerButtons.leadingAnchor, constant: -12),
+
+            headerButtons.topAnchor.constraint(equalTo: titleLabel.topAnchor),
             headerButtons.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             createRoomButton.widthAnchor.constraint(equalToConstant: 32),
             createRoomButton.heightAnchor.constraint(equalToConstant: 32),
@@ -206,18 +228,58 @@ class HomeViewController: UIViewController {
         roomTableView.reloadData()
     }
 
+    @objc private func refreshRooms() {
+        loadData()
+        refreshControl.endRefreshing()
+    }
+
     private func updateMinimizedRoomFloat() {
         guard let minimized = MockDataManager.shared.getMinimizedRoom() else {
             roomFloatView.isHidden = true
             return
         }
         roomFloatView.isHidden = false
-        roomFloatImageView.image = UIImage(named: minimized.room.coverImage)
+        if let coverUri = minimized.room.coverUri {
+            roomFloatImageView.image = UIImage(contentsOfFile: coverUri) ?? UIImage(named: minimized.room.coverImage)
+        } else {
+            roomFloatImageView.image = UIImage(named: minimized.room.coverImage)
+        }
         roomFloatTitleLabel.text = minimized.room.roomName
         roomFloatIdLabel.text = "ID: \(minimized.room.roomId)"
     }
 
     @objc private func createRoomTapped() {
+        // 已有自己创建的房间
+        if let myRoom = MockDataManager.shared.getMyRoom() {
+            let alert = UIAlertController(
+                title: "Already In Room",
+                message: "You already have an active room \"\(myRoom.roomName)\". Leave it to create a new one?",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            alert.addAction(UIAlertAction(title: "Leave & Create", style: .destructive) { [weak self] _ in
+                MockDataManager.shared.removeUserCreatedRoom(roomId: myRoom.roomId)
+                self?.pushAppViewController(CreateRoomViewController(), animated: true)
+            })
+            present(alert, animated: true)
+            return
+        }
+        // 有最小化房间（别人的房间）
+        if let minimized = MockDataManager.shared.getMinimizedRoom() {
+            let alert = UIAlertController(
+                title: "Currently In Room",
+                message: "You are in room \"\(minimized.room.roomName)\". Leave it to create a new one?",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            alert.addAction(UIAlertAction(title: "Leave & Create", style: .destructive) { [weak self] _ in
+                MockDataManager.shared.clearMinimizedRoom()
+                self?.updateMinimizedRoomFloat()
+                self?.pushAppViewController(CreateRoomViewController(), animated: true)
+            })
+            present(alert, animated: true)
+            return
+        }
         pushAppViewController(CreateRoomViewController(), animated: true)
     }
 
@@ -240,17 +302,36 @@ class HomeViewController: UIViewController {
     }
 
     private func openRoom(_ room: VoiceRoom, isOwner: Bool? = nil) {
-        // 记录浏览历史，对应 Android BrowseHistoryManager.addBrowseHistory
+        // 有最小化房间且目标是不同的房间 → 弹确认
+        if let minimized = MockDataManager.shared.getMinimizedRoom(),
+           minimized.room.roomId != room.roomId {
+            let alert = UIAlertController(
+                title: "Currently In Room",
+                message: "You are in room \"\(minimized.room.roomName)\". Leave it to enter this room?",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            alert.addAction(UIAlertAction(title: "Leave & Enter", style: .destructive) { [weak self] _ in
+                MockDataManager.shared.clearMinimizedRoom()
+                self?.updateMinimizedRoomFloat()
+                self?.doOpenRoom(room, isOwner: isOwner)
+            })
+            present(alert, animated: true)
+            return
+        }
+        doOpenRoom(room, isOwner: isOwner)
+    }
+
+    private func doOpenRoom(_ room: VoiceRoom, isOwner: Bool? = nil) {
         MockDataManager.shared.addBrowseHistory(room)
         let vc = VoiceRoomViewController()
         vc.room = room
-        // 自动检测是否为房主：只认当前用户创建的房间，避免预设用户误认系统 Mock 房
         if let override = isOwner {
             vc.isOwner = override
         } else if let currentUser = UserManager.shared.currentUser {
             vc.isOwner = MockDataManager.shared.isUserCreatedRoom(room)
                 && room.hostName == currentUser.name
-                && room.hostAvatarImage == currentUser.avatarImage
+                && room.hostAvatarImage == currentUser.displayAvatar
         }
         pushAppViewController(vc, animated: true)
     }
@@ -258,7 +339,7 @@ class HomeViewController: UIViewController {
 }
 
 // MARK: - 分类 CollectionView 数据源和代理
-extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelegate {
+extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return categories.count
     }
@@ -270,6 +351,12 @@ extension HomeViewController: UICollectionViewDataSource, UICollectionViewDelega
             isSelected: indexPath.item == selectedCategoryIndex
         )
         return cell
+    }
+
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        let title = categories[indexPath.item] as NSString
+        let width = ceil(title.size(withAttributes: [.font: Theme.Fonts.medium(14)]).width) + 40
+        return CGSize(width: max(width, 72), height: 36)
     }
 
     /// 点击分类切换 - 刷新列表

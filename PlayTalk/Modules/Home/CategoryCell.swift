@@ -10,6 +10,9 @@ class CategoryCell: UICollectionViewCell {
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.font = Theme.Fonts.medium(14) // 对应 Android 14sp
+        label.textAlignment = .center
+        label.setContentCompressionResistancePriority(.required, for: .horizontal)
+        label.setContentHuggingPriority(.required, for: .horizontal)
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()

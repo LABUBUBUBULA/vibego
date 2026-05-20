@@ -7,11 +7,27 @@ class PostDetailViewController: UIViewController {
     // MARK: - 传入数据
 
     var post: Post?
+    /// 回调：详情页修改后同步给列表
+    var onPostUpdated: ((Post) -> Void)?
 
     // MARK: - 数据
 
     /// Mock 评论列表
     private var comments: [(user: User, content: String, time: String)] = []
+
+    /// 删除帖子回调
+    var onPostDeleted: ((Int) -> Void)?
+
+    private let reportReasons = [
+        "Harassment or bullying",
+        "Sexual content",
+        "Hate speech",
+        "Scam or fraud",
+        "Spam",
+        "Fake profile",
+        "Underage user",
+        "Other"
+    ]
 
     // MARK: - UI 组件
 
@@ -73,9 +89,92 @@ class PostDetailViewController: UIViewController {
         super.viewDidLoad()
         title = "Post Detail"
         view.backgroundColor = Theme.Colors.darkBackground
+        setupMoreButton()
         setupUI()
         setupActions()
         loadMockComments()
+    }
+
+    private func setupMoreButton() {
+        let moreButton = UIButton(type: .system)
+        moreButton.setImage(UIImage(systemName: "ellipsis"), for: .normal)
+        moreButton.tintColor = .white
+        moreButton.frame = CGRect(x: 0, y: 0, width: 28, height: 28)
+        moreButton.addTarget(self, action: #selector(moreTapped), for: .touchUpInside)
+        navigationItem.rightBarButtonItem = UIBarButtonItem(customView: moreButton)
+    }
+
+    @objc private func moreTapped() {
+        let currentUserId = UserManager.shared.currentUser?.id ?? 0
+        let isOwnPost = post?.authorId == "\(currentUserId)"
+
+        if isOwnPost {
+            let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+            alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
+                guard let self, let postId = self.post?.id else { return }
+                MockDataManager.shared.removeUserPost(id: postId)
+                self.onPostDeleted?(postId)
+                self.showToast("Post deleted")
+                self.navigationController?.popViewController(animated: true)
+            })
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            if let popover = alert.popoverPresentationController {
+                popover.barButtonItem = navigationItem.rightBarButtonItem
+            }
+            present(alert, animated: true)
+        } else {
+            showReportSheet()
+        }
+    }
+
+    private func showReportSheet() {
+        let alert = UIAlertController(
+            title: "Report Post",
+            message: "Choose a reason. PlayTalk reviews reports about inappropriate content.",
+            preferredStyle: .actionSheet
+        )
+        reportReasons.forEach { reason in
+            alert.addAction(UIAlertAction(title: reason, style: .default) { [weak self] _ in
+                self?.showReportDetail(reason: reason)
+            })
+        }
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        if let popover = alert.popoverPresentationController {
+            popover.barButtonItem = navigationItem.rightBarButtonItem
+        }
+        present(alert, animated: true)
+    }
+
+    private func showReportDetail(reason: String) {
+        let authorName = post?.authorName ?? "this user"
+        let alert = UIAlertController(
+            title: "Report \(authorName)",
+            message: "Reason: \(reason)\nAdd details to help us review faster.",
+            preferredStyle: .alert
+        )
+        alert.addTextField { tf in
+            tf.placeholder = "Describe what happened"
+            tf.clearButtonMode = .whileEditing
+        }
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Submit", style: .destructive) { [weak self, weak alert] _ in
+            let detail = alert?.textFields?.first?.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let message = detail.isEmpty
+                ? "Thanks. We will review this post."
+                : "Thanks. We will review this post and your details."
+            let done = UIAlertController(title: "Report submitted", message: message, preferredStyle: .alert)
+            done.addAction(UIAlertAction(title: "OK", style: .default))
+            self?.present(done, animated: true)
+        })
+        present(alert, animated: true)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        if isMovingFromParent, let post = post {
+            onPostUpdated?(post)
+            MockDataManager.shared.updateUserPost(post)
+        }
     }
 
     // MARK: - 界面搭建
@@ -130,6 +229,8 @@ class PostDetailViewController: UIViewController {
         post = p
         likeButton.setImage(UIImage(named: p.isLiked ? "ic_like" : "ic_unlike"), for: .normal)
         likeCountLabel.text = "\(p.likeCount)"
+        // 同步顶部统计区
+        tableView.reloadRows(at: [IndexPath(row: 0, section: 0)], with: .none)
     }
 
     /// 评论输入
@@ -140,10 +241,22 @@ class PostDetailViewController: UIViewController {
         }
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Post", style: .default) { [weak self] _ in
-            guard let text = alert.textFields?.first?.text, !text.isEmpty else { return }
+            guard let self, let text = alert.textFields?.first?.text, !text.isEmpty else { return }
             let user = UserManager.shared.currentUser ?? MockDataManager.shared.users[0]
-            self?.comments.insert((user: user, content: text, time: "Just now"), at: 0)
-            self?.tableView.reloadData()
+            self.comments.insert((user: user, content: text, time: "Just now"), at: 0)
+            self.post?.commentCount = self.comments.count
+            self.tableView.reloadData()
+            // 持久化评论
+            if let postId = self.post?.id {
+                let comment = MockDataManager.UserComment(
+                    postId: postId,
+                    userName: user.name,
+                    userAvatar: user.displayAvatar,
+                    content: text,
+                    time: "Just now"
+                )
+                MockDataManager.shared.addUserComment(comment)
+            }
         })
         present(alert, animated: true)
     }
@@ -151,9 +264,30 @@ class PostDetailViewController: UIViewController {
     // MARK: - Mock 数据
 
     private func loadMockComments() {
-        let users = MockDataManager.shared.users
+        let currentUserId = UserManager.shared.currentUser?.id ?? 0
+        let isOwnPost = post?.authorId == "\(currentUserId)"
+        let allUsers = MockDataManager.shared.users
+
+        // 加载已保存的用户评论
+        var savedComments: [(user: User, content: String, time: String)] = []
+        if let postId = post?.id {
+            savedComments = MockDataManager.shared.getUserComments(postId: postId).map { c in
+                let user = allUsers.first { $0.name == c.userName }
+                    ?? UserManager.shared.currentUser
+                    ?? allUsers[0]
+                return (user: user, content: c.content, time: c.time)
+            }
+        }
+
+        // 自己发布的帖子不预设评论，只显示已保存的
+        if isOwnPost {
+            comments = savedComments
+            post?.commentCount = comments.count
+            return
+        }
+
         let commentTexts = [
-            "Great post! Very helpful 👍",
+            "Great post! Very helpful ��",
             "I totally agree with this",
             "Can you share more details?",
             "This is exactly what I was looking for",
@@ -161,11 +295,13 @@ class PostDetailViewController: UIViewController {
             "I tried this and it works great",
             "Looking forward to more content like this"
         ]
-        comments = (0..<7).map { i in
-            (user: users[(i + 3) % users.count],
+        let mockComments: [(user: User, content: String, time: String)] = (0..<7).map { i in
+            (user: allUsers[(i + 3) % allUsers.count],
              content: commentTexts[i],
              time: "\(Int.random(in: 1...24))h ago")
         }
+        comments = savedComments + mockComments
+        post?.commentCount = comments.count
     }
 }
 
@@ -250,28 +386,64 @@ extension PostDetailViewController: UITableViewDataSource, UITableViewDelegate {
         contentLabel.translatesAutoresizingMaskIntoConstraints = false
 
         let postImageView = UIImageView()
-        postImageView.contentMode = .scaleAspectFill
+        postImageView.contentMode = .scaleAspectFit
         postImageView.layer.cornerRadius = 14
         postImageView.layer.masksToBounds = true
-        postImageView.backgroundColor = Theme.Colors.separator
+        postImageView.backgroundColor = .clear
         postImageView.image = post.images.first.flatMap { UIImage(named: $0) }
+            ?? post.imageUris.first.flatMap { UIImage(contentsOfFile: $0) }
         postImageView.isHidden = postImageView.image == nil
         postImageView.translatesAutoresizingMaskIntoConstraints = false
 
-        // 统计信息
-        let statsLabel = UILabel()
-        statsLabel.text = "👁 \(post.viewCountText)   💬 \(post.commentCount)   ❤️ \(post.likeCount)"
-        statsLabel.font = Theme.Fonts.regular(13)
-        statsLabel.textColor = Theme.Colors.textSecondary
-        statsLabel.translatesAutoresizingMaskIntoConstraints = false
+        // 统计信息（图标+文字）
+        let statsContainer = UIStackView()
+        statsContainer.axis = .horizontal
+        statsContainer.spacing = 16
+        statsContainer.alignment = .center
+        statsContainer.translatesAutoresizingMaskIntoConstraints = false
+
+        func makeStatItem(icon: String, text: String) -> UIStackView {
+            let iconView = UIImageView(image: UIImage(named: icon))
+            iconView.contentMode = .scaleAspectFit
+            iconView.tintColor = Theme.Colors.textSecondary
+            iconView.translatesAutoresizingMaskIntoConstraints = false
+            iconView.widthAnchor.constraint(equalToConstant: 20).isActive = true
+            iconView.heightAnchor.constraint(equalToConstant: 20).isActive = true
+
+            let label = UILabel()
+            label.text = text
+            label.font = Theme.Fonts.regular(13)
+            label.textColor = Theme.Colors.textSecondary
+
+            let stack = UIStackView(arrangedSubviews: [iconView, label])
+            stack.axis = .horizontal
+            stack.spacing = 4
+            stack.alignment = .center
+            return stack
+        }
+
+        statsContainer.addArrangedSubview(makeStatItem(icon: "ic_see", text: post.viewCountText))
+        statsContainer.addArrangedSubview(makeStatItem(icon: "ic_forum_chat", text: "\(comments.count)"))
+        statsContainer.addArrangedSubview(makeStatItem(icon: "ic_unlike", text: "\(post.likeCount)"))
 
         cell.contentView.addSubview(authorLabel)
         cell.contentView.addSubview(titleLabel)
         cell.contentView.addSubview(contentLabel)
         cell.contentView.addSubview(postImageView)
-        cell.contentView.addSubview(statsLabel)
+        cell.contentView.addSubview(statsContainer)
 
-        let imageHeight = postImageView.heightAnchor.constraint(equalToConstant: postImageView.isHidden ? 0 : 180)
+        // 根据图片宽高比动态计算高度，横图180，竖图按比例最大360
+        let calcHeight: CGFloat
+        if postImageView.isHidden {
+            calcHeight = 0
+        } else if let img = postImageView.image {
+            let screenWidth = UIScreen.main.bounds.width - 32
+            let ratio = img.size.height / max(img.size.width, 1)
+            calcHeight = min(screenWidth * ratio, 360)
+        } else {
+            calcHeight = 180
+        }
+        let imageHeight = postImageView.heightAnchor.constraint(equalToConstant: calcHeight)
 
         NSLayoutConstraint.activate([
             authorLabel.topAnchor.constraint(equalTo: cell.contentView.topAnchor, constant: 16),
@@ -290,9 +462,9 @@ extension PostDetailViewController: UITableViewDataSource, UITableViewDelegate {
             postImageView.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
             imageHeight,
 
-            statsLabel.topAnchor.constraint(equalTo: postImageView.bottomAnchor, constant: 16),
-            statsLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            statsLabel.bottomAnchor.constraint(equalTo: cell.contentView.bottomAnchor, constant: -16)
+            statsContainer.topAnchor.constraint(equalTo: postImageView.bottomAnchor, constant: 16),
+            statsContainer.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            statsContainer.bottomAnchor.constraint(equalTo: cell.contentView.bottomAnchor, constant: -16)
         ])
     }
 }
@@ -304,21 +476,14 @@ class CommentCell: UITableViewCell {
     static let reuseId = "CommentCell"
 
     /// 头像
-    private let avatarView: UIView = {
-        let v = UIView()
-        v.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.3)
-        v.layer.cornerRadius = 18
-        v.translatesAutoresizingMaskIntoConstraints = false
-        return v
-    }()
-
-    private let avatarLabel: UILabel = {
-        let label = UILabel()
-        label.font = Theme.Fonts.bold(14)
-        label.textColor = Theme.Colors.primaryYellow
-        label.textAlignment = .center
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
+    private let avatarImageView: UIImageView = {
+        let iv = UIImageView()
+        iv.contentMode = .scaleAspectFill
+        iv.layer.cornerRadius = 18
+        iv.layer.masksToBounds = true
+        iv.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.3)
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        return iv
     }()
 
     /// 昵称
@@ -354,23 +519,19 @@ class CommentCell: UITableViewCell {
         backgroundColor = .clear
         selectionStyle = .none
 
-        contentView.addSubview(avatarView)
-        avatarView.addSubview(avatarLabel)
+        contentView.addSubview(avatarImageView)
         contentView.addSubview(nameLabel)
         contentView.addSubview(contentLabel)
         contentView.addSubview(timeLabel)
 
         NSLayoutConstraint.activate([
-            avatarView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
-            avatarView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            avatarView.widthAnchor.constraint(equalToConstant: 36),
-            avatarView.heightAnchor.constraint(equalToConstant: 36),
+            avatarImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+            avatarImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            avatarImageView.widthAnchor.constraint(equalToConstant: 36),
+            avatarImageView.heightAnchor.constraint(equalToConstant: 36),
 
-            avatarLabel.centerXAnchor.constraint(equalTo: avatarView.centerXAnchor),
-            avatarLabel.centerYAnchor.constraint(equalTo: avatarView.centerYAnchor),
-
-            nameLabel.topAnchor.constraint(equalTo: avatarView.topAnchor),
-            nameLabel.leadingAnchor.constraint(equalTo: avatarView.trailingAnchor, constant: 10),
+            nameLabel.topAnchor.constraint(equalTo: avatarImageView.topAnchor),
+            nameLabel.leadingAnchor.constraint(equalTo: avatarImageView.trailingAnchor, constant: 10),
 
             timeLabel.centerYAnchor.constraint(equalTo: nameLabel.centerYAnchor),
             timeLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
@@ -388,7 +549,7 @@ class CommentCell: UITableViewCell {
 
     /// 配置评论 Cell
     func configure(user: User, content: String, time: String) {
-        avatarLabel.text = String(user.name.prefix(1))
+        avatarImageView.image = user.displayAvatarImage ?? UIImage(named: user.avatarImage)
         nameLabel.text = user.name
         contentLabel.text = content
         timeLabel.text = time

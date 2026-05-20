@@ -38,6 +38,7 @@ final class UserManager {
 
     /// 预设登录账号：用于展示完整 Mock 用户资料、头像、粉丝、聊天等
     private let presetAccounts: [String: (password: String, userIndex: Int)] = [
+        "gamemic@gmail.com": ("123456789", 0),
         "playtalk@gmail.com": ("123456789", 0)
     ]
 

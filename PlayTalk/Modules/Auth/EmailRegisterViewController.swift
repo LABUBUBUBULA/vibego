@@ -7,20 +7,39 @@ class EmailRegisterViewController: UIViewController {
 
     // MARK: - UI 组件
 
+    /// 大标题区域，对齐 Android 注册页
+    private let titleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Register"
+        label.font = Theme.Fonts.bold(32)
+        label.textColor = Theme.Colors.primaryYellow
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    private let subtitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "To a mailbox"
+        label.font = Theme.Fonts.regular(16)
+        label.textColor = Theme.Colors.textPrimary
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
     /// 邮箱输入框
     private let emailField: UITextField = {
         let tf = UITextField()
-        tf.placeholder = "Email"
+        tf.attributedPlaceholder = NSAttributedString(string: "Email", attributes: [.foregroundColor: UIColor.lightGray])
         tf.keyboardType = .emailAddress
         tf.autocapitalizationType = .none
         tf.autocorrectionType = .no
         tf.textColor = Theme.Colors.textPrimary
-        tf.font = Theme.Fonts.regular(16)
+        tf.font = Theme.Fonts.regular(14)
         tf.backgroundColor = Theme.Colors.cardBackground
-        tf.layer.cornerRadius = 12
+        tf.layer.cornerRadius = 16
         tf.layer.borderWidth = 1
-        tf.layer.borderColor = Theme.Colors.separator.cgColor
-        tf.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 16, height: 0))
+        tf.layer.borderColor = UIColor(hex: "#343545").cgColor
+        tf.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 24, height: 0))
         tf.leftViewMode = .always
         tf.translatesAutoresizingMaskIntoConstraints = false
         return tf
@@ -30,7 +49,7 @@ class EmailRegisterViewController: UIViewController {
     private let emailErrorLabel: UILabel = {
         let label = UILabel()
         label.font = Theme.Fonts.regular(12)
-        label.textColor = .systemRed
+        label.textColor = Theme.Colors.primaryYellow
         label.isHidden = true
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -39,15 +58,15 @@ class EmailRegisterViewController: UIViewController {
     /// 密码输入框
     private let passwordField: UITextField = {
         let tf = UITextField()
-        tf.placeholder = "Password (min 6 characters)"
+        tf.attributedPlaceholder = NSAttributedString(string: "Password (min 6 characters)", attributes: [.foregroundColor: UIColor.lightGray])
         tf.isSecureTextEntry = true
         tf.textColor = Theme.Colors.textPrimary
-        tf.font = Theme.Fonts.regular(16)
+        tf.font = Theme.Fonts.regular(14)
         tf.backgroundColor = Theme.Colors.cardBackground
-        tf.layer.cornerRadius = 12
+        tf.layer.cornerRadius = 16
         tf.layer.borderWidth = 1
-        tf.layer.borderColor = Theme.Colors.separator.cgColor
-        tf.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 16, height: 0))
+        tf.layer.borderColor = UIColor(hex: "#343545").cgColor
+        tf.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 24, height: 0))
         tf.leftViewMode = .always
         tf.translatesAutoresizingMaskIntoConstraints = false
         return tf
@@ -66,7 +85,7 @@ class EmailRegisterViewController: UIViewController {
     private let passwordErrorLabel: UILabel = {
         let label = UILabel()
         label.font = Theme.Fonts.regular(12)
-        label.textColor = .systemRed
+        label.textColor = Theme.Colors.primaryYellow
         label.isHidden = true
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -79,8 +98,61 @@ class EmailRegisterViewController: UIViewController {
         btn.setTitleColor(Theme.Colors.darkerBackground, for: .normal)
         btn.titleLabel?.font = Theme.Fonts.bold(16)
         btn.backgroundColor = Theme.Colors.primaryYellow
-        btn.layer.cornerRadius = 25
+        btn.layer.cornerRadius = 16
         btn.translatesAutoresizingMaskIntoConstraints = false
+        return btn
+    }()
+
+    private let agreementStack: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.alignment = .center
+        stack.spacing = 2
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+
+    private let agreementPrefixLabel: UILabel = {
+        let label = UILabel()
+        label.text = "By registering, you agree to"
+        label.font = Theme.Fonts.regular(12)
+        label.textColor = Theme.Colors.textSecondary
+        return label
+    }()
+
+    private let termsButton: UIButton = {
+        let btn = UIButton(type: .system)
+        let title = NSAttributedString(
+            string: "Terms",
+            attributes: [
+                .font: Theme.Fonts.medium(12),
+                .foregroundColor: Theme.Colors.primaryYellow,
+                .underlineStyle: NSUnderlineStyle.single.rawValue
+            ]
+        )
+        btn.setAttributedTitle(title, for: .normal)
+        return btn
+    }()
+
+    private let agreementAndLabel: UILabel = {
+        let label = UILabel()
+        label.text = "and"
+        label.font = Theme.Fonts.regular(12)
+        label.textColor = Theme.Colors.textSecondary
+        return label
+    }()
+
+    private let privacyButton: UIButton = {
+        let btn = UIButton(type: .system)
+        let title = NSAttributedString(
+            string: "Privacy Policy",
+            attributes: [
+                .font: Theme.Fonts.medium(12),
+                .foregroundColor: Theme.Colors.primaryYellow,
+                .underlineStyle: NSUnderlineStyle.single.rawValue
+            ]
+        )
+        btn.setAttributedTitle(title, for: .normal)
         return btn
     }()
 
@@ -94,23 +166,43 @@ class EmailRegisterViewController: UIViewController {
         setupActions()
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(false, animated: animated)
+    }
+
     // MARK: - 界面搭建
 
     private func setupUI() {
         navigationItem.leftBarButtonItem = makeAppBackButton(action: #selector(backTapped))
 
+        view.addSubview(titleLabel)
+        view.addSubview(subtitleLabel)
         view.addSubview(emailField)
         view.addSubview(emailErrorLabel)
         view.addSubview(passwordField)
         view.addSubview(passwordToggleButton)
         view.addSubview(passwordErrorLabel)
         view.addSubview(registerButton)
+        view.addSubview(agreementStack)
+        agreementStack.addArrangedSubview(agreementPrefixLabel)
+        agreementStack.addArrangedSubview(termsButton)
+        agreementStack.addArrangedSubview(agreementAndLabel)
+        agreementStack.addArrangedSubview(privacyButton)
 
         NSLayoutConstraint.activate([
-            emailField.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 40),
-            emailField.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            emailField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-            emailField.heightAnchor.constraint(equalToConstant: 50),
+            titleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 64),
+            titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
+            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -32),
+
+            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
+            subtitleLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            subtitleLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -32),
+
+            emailField.topAnchor.constraint(equalTo: view.centerYAnchor, constant: -88),
+            emailField.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
+            emailField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
+            emailField.heightAnchor.constraint(equalToConstant: 56),
 
             emailErrorLabel.topAnchor.constraint(equalTo: emailField.bottomAnchor, constant: 4),
             emailErrorLabel.leadingAnchor.constraint(equalTo: emailField.leadingAnchor, constant: 4),
@@ -118,7 +210,7 @@ class EmailRegisterViewController: UIViewController {
             passwordField.topAnchor.constraint(equalTo: emailErrorLabel.bottomAnchor, constant: 12),
             passwordField.leadingAnchor.constraint(equalTo: emailField.leadingAnchor),
             passwordField.trailingAnchor.constraint(equalTo: emailField.trailingAnchor),
-            passwordField.heightAnchor.constraint(equalToConstant: 50),
+            passwordField.heightAnchor.constraint(equalToConstant: 56),
 
             passwordToggleButton.centerYAnchor.constraint(equalTo: passwordField.centerYAnchor),
             passwordToggleButton.trailingAnchor.constraint(equalTo: passwordField.trailingAnchor, constant: -12),
@@ -131,7 +223,12 @@ class EmailRegisterViewController: UIViewController {
             registerButton.topAnchor.constraint(equalTo: passwordErrorLabel.bottomAnchor, constant: 32),
             registerButton.leadingAnchor.constraint(equalTo: emailField.leadingAnchor),
             registerButton.trailingAnchor.constraint(equalTo: emailField.trailingAnchor),
-            registerButton.heightAnchor.constraint(equalToConstant: 50)
+            registerButton.heightAnchor.constraint(equalToConstant: 56),
+
+            agreementStack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            agreementStack.leadingAnchor.constraint(greaterThanOrEqualTo: emailField.leadingAnchor),
+            agreementStack.trailingAnchor.constraint(lessThanOrEqualTo: emailField.trailingAnchor),
+            agreementStack.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -24)
         ])
     }
 
@@ -140,6 +237,8 @@ class EmailRegisterViewController: UIViewController {
     private func setupActions() {
         registerButton.addTarget(self, action: #selector(registerTapped), for: .touchUpInside)
         passwordToggleButton.addTarget(self, action: #selector(togglePassword), for: .touchUpInside)
+        termsButton.addTarget(self, action: #selector(termsTapped), for: .touchUpInside)
+        privacyButton.addTarget(self, action: #selector(privacyTapped), for: .touchUpInside)
         emailField.addTarget(self, action: #selector(hideErrors), for: .editingChanged)
         passwordField.addTarget(self, action: #selector(hideErrors), for: .editingChanged)
     }
@@ -151,6 +250,14 @@ class EmailRegisterViewController: UIViewController {
     @objc private func togglePassword() {
         passwordToggleButton.isSelected.toggle()
         passwordField.isSecureTextEntry = !passwordToggleButton.isSelected
+    }
+
+    @objc private func termsTapped() {
+        navigationController?.pushViewController(LegalTextViewController(type: .terms), animated: true)
+    }
+
+    @objc private func privacyTapped() {
+        navigationController?.pushViewController(LegalTextViewController(type: .privacy), animated: true)
     }
 
     @objc private func hideErrors() {

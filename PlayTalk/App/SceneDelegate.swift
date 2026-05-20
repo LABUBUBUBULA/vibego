@@ -12,7 +12,17 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         window = UIWindow(windowScene: windowScene)
 
+        // 全局键盘收起：点击输入框以外空白区域时，结束当前编辑状态。
+        // cancelsTouchesInView=false，避免影响按钮、列表、麦位等原本点击事件。
+        let keyboardDismissTap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+        keyboardDismissTap.cancelsTouchesInView = false
+        window?.addGestureRecognizer(keyboardDismissTap)
+
         window?.rootViewController = SplashViewController()
         window?.makeKeyAndVisible()
+    }
+
+    @objc private func dismissKeyboard() {
+        window?.endEditing(true)
     }
 }

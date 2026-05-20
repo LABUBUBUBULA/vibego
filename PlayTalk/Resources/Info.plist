@@ -18,6 +18,39 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>CFBundleIcons</key>
+	<dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array>
+				<string>Icon-40</string>
+				<string>Icon-58</string>
+				<string>Icon-60</string>
+				<string>Icon-80</string>
+				<string>Icon-87</string>
+				<string>Icon-120</string>
+				<string>Icon-180</string>
+			</array>
+			<key>UIPrerenderedIcon</key>
+			<true/>
+		</dict>
+	</dict>
+	<key>CFBundleIcons~ipad</key>
+	<dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array>
+				<string>Icon-40</string>
+				<string>Icon-58</string>
+				<string>Icon-80</string>
+				<string>Icon-120</string>
+			</array>
+			<key>UIPrerenderedIcon</key>
+			<true/>
+		</dict>
+	</dict>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -35,12 +68,16 @@
 			</array>
 		</dict>
 	</dict>
+	<key>UIRequiresFullScreen</key>
+	<true/>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>PlayTalk needs microphone access to send voice messages.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>PlayTalk needs camera access to take profile photos.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>PlayTalk needs photo library access to send images and videos.</string>
 	<key>UILaunchStoryboardName</key>

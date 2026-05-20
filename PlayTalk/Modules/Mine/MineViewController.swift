@@ -11,6 +11,7 @@ class MineViewController: UIViewController {
         let sv = UIScrollView()
         sv.backgroundColor = .clear
         sv.showsVerticalScrollIndicator = false
+        sv.contentInsetAdjustmentBehavior = .never
         sv.translatesAutoresizingMaskIntoConstraints = false
         return sv
     }()
@@ -21,15 +22,25 @@ class MineViewController: UIViewController {
         return v
     }()
 
+    override var preferredStatusBarStyle: UIStatusBarStyle { .lightContent }
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Mine"
         view.backgroundColor = Theme.Colors.darkerBackground
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: animated)
         rebuildUI()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        // push 到子页面时恢复导航栏，切tab时由 MainTabBarController 统一管理
+        if let nav = navigationController, nav.viewControllers.count > 1 {
+            navigationController?.setNavigationBarHidden(false, animated: animated)
+        }
     }
 
     private func rebuildUI() {
@@ -99,9 +110,9 @@ class MineViewController: UIViewController {
         header.translatesAutoresizingMaskIntoConstraints = false
         header.clipsToBounds = true
 
-        let bg = UIImageView(image: UIImage(named: user.backgroundImage) ?? UIImage(named: "bg_mine"))
+        let bg = UIImageView(image: UIImage(named: "bg_mine"))
         bg.contentMode = .scaleAspectFill
-        bg.alpha = 0.42
+        bg.alpha = 0.55
         bg.translatesAutoresizingMaskIntoConstraints = false
         header.addSubview(bg)
 
@@ -110,7 +121,7 @@ class MineViewController: UIViewController {
         dim.translatesAutoresizingMaskIntoConstraints = false
         header.addSubview(dim)
 
-        let avatar = UIImageView(image: UIImage(named: user.avatarImage))
+        let avatar = UIImageView(image: user.displayAvatarImage ?? UIImage(named: user.avatarImage))
         avatar.contentMode = .scaleAspectFill
         avatar.layer.cornerRadius = 31
         avatar.layer.masksToBounds = true
@@ -157,12 +168,18 @@ class MineViewController: UIViewController {
         header.addSubview(homepageWrap)
 
         let homepage = UIButton(type: .system)
-        homepage.setTitle("Homepage ›", for: .normal)
-        homepage.setTitleColor(.white, for: .normal)
-        homepage.titleLabel?.font = Theme.Fonts.bold(12)
+        var homepageCfg = UIButton.Configuration.plain()
+        homepageCfg.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 10, bottom: 0, trailing: 10)
+        homepageCfg.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attrs in
+            var a = attrs
+            a.font = Theme.Fonts.bold(12)
+            a.foregroundColor = UIColor.white
+            return a
+        }
+        homepageCfg.title = "Homepage ›"
+        homepage.configuration = homepageCfg
         homepage.backgroundColor = UIColor.white.withAlphaComponent(0.08)
         homepage.layer.cornerRadius = 12
-        homepage.contentEdgeInsets = UIEdgeInsets(top: 0, left: 10, bottom: 0, right: 10)
         homepage.translatesAutoresizingMaskIntoConstraints = false
         homepage.addTarget(self, action: #selector(homepageTapped), for: .touchUpInside)
         homepageWrap.addSubview(homepage)
@@ -207,8 +224,8 @@ class MineViewController: UIViewController {
 
             homepageWrap.trailingAnchor.constraint(equalTo: header.trailingAnchor, constant: -18),
             homepageWrap.centerYAnchor.constraint(equalTo: badgesStack.centerYAnchor),
-            homepageWrap.widthAnchor.constraint(equalToConstant: 92),
-            homepageWrap.heightAnchor.constraint(equalToConstant: 24),
+            homepageWrap.widthAnchor.constraint(equalToConstant: 112),
+            homepageWrap.heightAnchor.constraint(equalToConstant: 26),
 
             homepage.topAnchor.constraint(equalTo: homepageWrap.topAnchor),
             homepage.leadingAnchor.constraint(equalTo: homepageWrap.leadingAnchor),

@@ -7,21 +7,40 @@ class EmailSignInViewController: UIViewController {
 
     // MARK: - UI 组件
 
+    /// 大标题区域，对齐 Android：黄色 32sp 标题 + 白色副标题
+    private let titleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Sign In"
+        label.font = Theme.Fonts.bold(32)
+        label.textColor = Theme.Colors.primaryYellow
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
+    private let subtitleLabel: UILabel = {
+        let label = UILabel()
+        label.text = "To a mailbox"
+        label.font = Theme.Fonts.regular(16)
+        label.textColor = Theme.Colors.textPrimary
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+
     /// 邮箱输入框（对应 Android et_account）
     private let emailField: UITextField = {
         let tf = UITextField()
-        tf.placeholder = "Email"
+        tf.attributedPlaceholder = NSAttributedString(string: "Email", attributes: [.foregroundColor: UIColor.lightGray])
         tf.keyboardType = .emailAddress
         tf.autocapitalizationType = .none
         tf.autocorrectionType = .no
         tf.textColor = Theme.Colors.textPrimary
-        tf.font = Theme.Fonts.regular(16)
+        tf.font = Theme.Fonts.regular(14)
         tf.backgroundColor = Theme.Colors.cardBackground
-        tf.layer.cornerRadius = 12
+        tf.layer.cornerRadius = 16
         tf.layer.borderWidth = 1
-        tf.layer.borderColor = Theme.Colors.separator.cgColor
+        tf.layer.borderColor = UIColor(hex: "#343545").cgColor
         // 左侧内边距
-        tf.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 16, height: 0))
+        tf.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 24, height: 0))
         tf.leftViewMode = .always
         tf.translatesAutoresizingMaskIntoConstraints = false
         return tf
@@ -31,7 +50,7 @@ class EmailSignInViewController: UIViewController {
     private let emailErrorLabel: UILabel = {
         let label = UILabel()
         label.font = Theme.Fonts.regular(12)
-        label.textColor = .systemRed
+        label.textColor = Theme.Colors.primaryYellow
         label.isHidden = true
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -40,15 +59,15 @@ class EmailSignInViewController: UIViewController {
     /// 密码输入框（对应 Android et_password）
     private let passwordField: UITextField = {
         let tf = UITextField()
-        tf.placeholder = "Password"
+        tf.attributedPlaceholder = NSAttributedString(string: "Password", attributes: [.foregroundColor: UIColor.lightGray])
         tf.isSecureTextEntry = true
         tf.textColor = Theme.Colors.textPrimary
-        tf.font = Theme.Fonts.regular(16)
+        tf.font = Theme.Fonts.regular(14)
         tf.backgroundColor = Theme.Colors.cardBackground
-        tf.layer.cornerRadius = 12
+        tf.layer.cornerRadius = 16
         tf.layer.borderWidth = 1
-        tf.layer.borderColor = Theme.Colors.separator.cgColor
-        tf.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 16, height: 0))
+        tf.layer.borderColor = UIColor(hex: "#343545").cgColor
+        tf.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 24, height: 0))
         tf.leftViewMode = .always
         tf.translatesAutoresizingMaskIntoConstraints = false
         return tf
@@ -67,7 +86,7 @@ class EmailSignInViewController: UIViewController {
     private let passwordErrorLabel: UILabel = {
         let label = UILabel()
         label.font = Theme.Fonts.regular(12)
-        label.textColor = .systemRed
+        label.textColor = Theme.Colors.primaryYellow
         label.isHidden = true
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -80,7 +99,7 @@ class EmailSignInViewController: UIViewController {
         btn.setTitleColor(Theme.Colors.darkerBackground, for: .normal)
         btn.titleLabel?.font = Theme.Fonts.bold(16)
         btn.backgroundColor = Theme.Colors.primaryYellow
-        btn.layer.cornerRadius = 25
+        btn.layer.cornerRadius = 16
         btn.translatesAutoresizingMaskIntoConstraints = false
         return btn
     }()
@@ -88,8 +107,8 @@ class EmailSignInViewController: UIViewController {
     /// 忘记密码链接（对应 Android tv_forget_password）
     private let forgotPasswordButton: UIButton = {
         let btn = UIButton(type: .system)
-        btn.setTitle("Forgot Password?", for: .normal)
-        btn.setTitleColor(Theme.Colors.textSecondary, for: .normal)
+        btn.setTitle("Forget the password", for: .normal)
+        btn.setTitleColor(Theme.Colors.primaryYellow, for: .normal)
         btn.titleLabel?.font = Theme.Fonts.regular(14)
         btn.translatesAutoresizingMaskIntoConstraints = false
         return btn
@@ -98,7 +117,7 @@ class EmailSignInViewController: UIViewController {
     /// 注册链接（对应 Android tv_register）
     private let registerButton: UIButton = {
         let btn = UIButton(type: .system)
-        btn.setTitle("Don't have an account? Register", for: .normal)
+        btn.setTitle("Register", for: .normal)
         btn.setTitleColor(Theme.Colors.primaryYellow, for: .normal)
         btn.titleLabel?.font = Theme.Fonts.medium(14)
         btn.translatesAutoresizingMaskIntoConstraints = false
@@ -115,12 +134,19 @@ class EmailSignInViewController: UIViewController {
         setupActions()
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(false, animated: animated)
+    }
+
     // MARK: - 界面搭建
 
     private func setupUI() {
         // 返回按钮样式
         navigationItem.leftBarButtonItem = makeAppBackButton(action: #selector(backTapped))
 
+        view.addSubview(titleLabel)
+        view.addSubview(subtitleLabel)
         view.addSubview(emailField)
         view.addSubview(emailErrorLabel)
         view.addSubview(passwordField)
@@ -131,11 +157,19 @@ class EmailSignInViewController: UIViewController {
         view.addSubview(registerButton)
 
         NSLayoutConstraint.activate([
-            // 邮箱输入框
-            emailField.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 40),
-            emailField.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
-            emailField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
-            emailField.heightAnchor.constraint(equalToConstant: 50),
+            titleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 64),
+            titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
+            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -32),
+
+            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
+            subtitleLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            subtitleLabel.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -32),
+
+            // 表单居中偏上，复刻 Android centerVertical 表单区域
+            emailField.topAnchor.constraint(equalTo: view.centerYAnchor, constant: -88),
+            emailField.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
+            emailField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
+            emailField.heightAnchor.constraint(equalToConstant: 56),
 
             // 邮箱错误提示
             emailErrorLabel.topAnchor.constraint(equalTo: emailField.bottomAnchor, constant: 4),
@@ -145,7 +179,7 @@ class EmailSignInViewController: UIViewController {
             passwordField.topAnchor.constraint(equalTo: emailErrorLabel.bottomAnchor, constant: 12),
             passwordField.leadingAnchor.constraint(equalTo: emailField.leadingAnchor),
             passwordField.trailingAnchor.constraint(equalTo: emailField.trailingAnchor),
-            passwordField.heightAnchor.constraint(equalToConstant: 50),
+            passwordField.heightAnchor.constraint(equalToConstant: 56),
 
             // 密码显隐按钮（密码框内右侧）
             passwordToggleButton.centerYAnchor.constraint(equalTo: passwordField.centerYAnchor),
@@ -161,15 +195,14 @@ class EmailSignInViewController: UIViewController {
             signInButton.topAnchor.constraint(equalTo: passwordErrorLabel.bottomAnchor, constant: 32),
             signInButton.leadingAnchor.constraint(equalTo: emailField.leadingAnchor),
             signInButton.trailingAnchor.constraint(equalTo: emailField.trailingAnchor),
-            signInButton.heightAnchor.constraint(equalToConstant: 50),
+            signInButton.heightAnchor.constraint(equalToConstant: 56),
 
-            // 忘记密码
-            forgotPasswordButton.topAnchor.constraint(equalTo: signInButton.bottomAnchor, constant: 16),
-            forgotPasswordButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            // 忘记密码和注册沿用 Android：同一行左右分布
+            forgotPasswordButton.topAnchor.constraint(equalTo: signInButton.bottomAnchor, constant: 20),
+            forgotPasswordButton.leadingAnchor.constraint(equalTo: signInButton.leadingAnchor),
 
-            // 注册链接（底部）
-            registerButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -24),
-            registerButton.centerXAnchor.constraint(equalTo: view.centerXAnchor)
+            registerButton.centerYAnchor.constraint(equalTo: forgotPasswordButton.centerYAnchor),
+            registerButton.trailingAnchor.constraint(equalTo: signInButton.trailingAnchor)
         ])
     }
 

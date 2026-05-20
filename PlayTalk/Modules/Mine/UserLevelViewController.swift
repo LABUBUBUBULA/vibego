@@ -147,7 +147,7 @@ class UserLevelViewController: UIViewController {
         card.translatesAutoresizingMaskIntoConstraints = false
         card.heightAnchor.constraint(equalToConstant: 120).isActive = true
 
-        avatarView.image = UIImage(named: user.avatarImage)
+        avatarView.image = user.displayAvatarImage ?? UIImage(named: user.avatarImage)
         nameLabel.text = user.name
         applyLevelUpGradient()
 

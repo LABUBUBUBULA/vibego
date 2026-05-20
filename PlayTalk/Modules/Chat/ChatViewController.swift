@@ -30,6 +30,20 @@ class ChatViewController: UIViewController {
         let time: String
     }
 
+    private struct StoredChatMessage: Codable {
+        let kind: String
+        let text: String
+        let duration: Int
+        let giftName: String
+        let giftCount: Int
+        let isMe: Bool
+        let time: String
+    }
+
+    private var storageKey: String { "playtalk_chat_\(chatUser?.userId ?? 0)" }
+    private var peerAvatarImage: String { chatUser?.avatarImage ?? "avatar_2" }
+    private var myAvatarImage: String { UserManager.shared.currentUser?.displayAvatar ?? MockDataManager.shared.currentUser.avatarImage }
+
     private var chatMessages: [ChatMessageItem] = []
     private let reportReasons = [
         "Harassment or bullying",
@@ -42,11 +56,14 @@ class ChatViewController: UIViewController {
         "Other"
     ]
     private var selectedReportReason: String?
-    private var inputBarBottomConstraint: NSLayoutConstraint?
+    private var inputBarNormalBottomConstraint: NSLayoutConstraint?
+    private var inputBarKeyboardBottomConstraint: NSLayoutConstraint?
     private var audioRecorder: AVAudioRecorder?
     private var recordingStartTime: Date?
     private var recordingURL: URL?
     private var isRecording = false
+    private var recordingHUD: UIView?
+    private var recordingPulseView: UIView?
 
     // MARK: - UI 组件
 
@@ -153,7 +170,9 @@ class ChatViewController: UIViewController {
         inputContainer.addSubview(functionStack)
         setupFunctionButtons()
 
-        inputBarBottomConstraint = inputBar.bottomAnchor.constraint(equalTo: functionStack.topAnchor, constant: -10)
+        inputBarNormalBottomConstraint = inputBar.bottomAnchor.constraint(equalTo: functionStack.topAnchor, constant: -10)
+        inputBarKeyboardBottomConstraint = inputBar.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        inputBarKeyboardBottomConstraint?.isActive = false
 
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
@@ -168,7 +187,7 @@ class ChatViewController: UIViewController {
 
             inputBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             inputBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            inputBarBottomConstraint!,
+            inputBarNormalBottomConstraint!,
             inputBar.heightAnchor.constraint(equalToConstant: 56),
 
             inputField.leadingAnchor.constraint(equalTo: inputBar.leadingAnchor, constant: 16),
@@ -197,8 +216,13 @@ class ChatViewController: UIViewController {
             ("ic_room_gift", "Gift", #selector(giftTapped))
         ]
 
-        items.forEach { item in
+        items.enumerated().forEach { index, item in
             let button = makeFunctionButton(icon: item.icon, title: item.title, action: item.action)
+            if index == 0 {
+                button.removeTarget(self, action: item.action, for: .touchUpInside)
+                button.addTarget(self, action: #selector(voiceTouchDown), for: .touchDown)
+                button.addTarget(self, action: #selector(voiceTouchUp), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+            }
             functionStack.addArrangedSubview(button)
         }
     }
@@ -269,7 +293,7 @@ class ChatViewController: UIViewController {
     @objc private func keyboardWillChangeFrame(_ notification: Notification) {
         guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
         let keyboardFrameInView = view.convert(keyboardFrame, from: nil)
-        let overlap = max(0, view.bounds.maxY - keyboardFrameInView.minY - view.safeAreaInsets.bottom)
+        let overlap = max(0, view.bounds.maxY - keyboardFrameInView.minY)
         updateInputContainerBottom(overlap, notification: notification)
     }
 
@@ -278,7 +302,11 @@ class ChatViewController: UIViewController {
     }
 
     private func updateInputContainerBottom(_ offset: CGFloat, notification: Notification) {
-        inputBarBottomConstraint?.constant = offset > 0 ? -offset : -10
+        let keyboardVisible = offset > 0
+        inputContainer.isHidden = keyboardVisible
+        inputBarNormalBottomConstraint?.isActive = !keyboardVisible
+        inputBarKeyboardBottomConstraint?.constant = keyboardVisible ? -offset : 0
+        inputBarKeyboardBottomConstraint?.isActive = keyboardVisible
         let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval ?? 0.25
         let curveValue = notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt ?? UIView.AnimationOptions.curveEaseInOut.rawValue
         UIView.animate(withDuration: duration, delay: 0, options: UIView.AnimationOptions(rawValue: curveValue << 16)) {
@@ -313,7 +341,12 @@ class ChatViewController: UIViewController {
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
             self?.chatMessages.removeAll()
+            self?.saveMessages()
             self?.tableView.reloadData()
+            // 同步清空消息列表中该条记录
+            if let userId = self?.chatUser?.userId {
+                MockDataManager.shared.clearMessageSummary(userId: userId)
+            }
             self?.showAlert(title: "Chat deleted", message: "Local chat history has been cleared.")
         })
         present(alert, animated: true)
@@ -367,10 +400,20 @@ class ChatViewController: UIViewController {
         showAlert(title: "Report submitted", message: message)
     }
 
-    /// 语音：真实录音，再发送录音文件消息
+    /// 语音：长按录音，松开发送
     @objc private func voiceTapped() {
         dismissKeyboard()
-        isRecording ? finishRecording() : requestMicrophoneAndStartRecording()
+    }
+
+    @objc private func voiceTouchDown() {
+        dismissKeyboard()
+        guard !isRecording else { return }
+        requestMicrophoneAndStartRecording()
+    }
+
+    @objc private func voiceTouchUp() {
+        guard isRecording else { return }
+        finishRecording()
     }
 
     private func requestMicrophoneAndStartRecording() {
@@ -403,7 +446,7 @@ class ChatViewController: UIViewController {
             recordingURL = url
             recordingStartTime = Date()
             isRecording = true
-            showAlert(title: "Recording", message: "Tap Voice again to send.")
+            showRecordingHUD()
         } catch {
             showAlert(title: "Record failed", message: error.localizedDescription)
         }
@@ -413,12 +456,83 @@ class ChatViewController: UIViewController {
         audioRecorder?.stop()
         audioRecorder = nil
         isRecording = false
+        hideRecordingHUD()
 
         guard let url = recordingURL else { return }
         let duration = max(1, Int(Date().timeIntervalSince(recordingStartTime ?? Date())))
         recordingURL = nil
         recordingStartTime = nil
         appendMessage(.voice(url: url, duration: duration), isMe: true)
+    }
+
+    private func showRecordingHUD() {
+        hideRecordingHUD()
+
+        let hud = UIView()
+        hud.backgroundColor = UIColor.black.withAlphaComponent(0.78)
+        hud.layer.cornerRadius = 18
+        hud.translatesAutoresizingMaskIntoConstraints = false
+
+        let pulse = UIView()
+        pulse.backgroundColor = Theme.Colors.primaryYellow
+        pulse.layer.cornerRadius = 22
+        pulse.translatesAutoresizingMaskIntoConstraints = false
+
+        let mic = UIImageView(image: UIImage(systemName: "mic.fill"))
+        mic.tintColor = Theme.Colors.darkerBackground
+        mic.contentMode = .scaleAspectFit
+        mic.translatesAutoresizingMaskIntoConstraints = false
+
+        let label = UILabel()
+        label.text = "Recording... release to send"
+        label.font = Theme.Fonts.medium(14)
+        label.textColor = .white
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        view.addSubview(hud)
+        hud.addSubview(pulse)
+        pulse.addSubview(mic)
+        hud.addSubview(label)
+
+        NSLayoutConstraint.activate([
+            hud.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            hud.bottomAnchor.constraint(equalTo: inputBar.topAnchor, constant: -20),
+            hud.widthAnchor.constraint(equalToConstant: 230),
+            hud.heightAnchor.constraint(equalToConstant: 126),
+
+            pulse.topAnchor.constraint(equalTo: hud.topAnchor, constant: 20),
+            pulse.centerXAnchor.constraint(equalTo: hud.centerXAnchor),
+            pulse.widthAnchor.constraint(equalToConstant: 44),
+            pulse.heightAnchor.constraint(equalToConstant: 44),
+
+            mic.centerXAnchor.constraint(equalTo: pulse.centerXAnchor),
+            mic.centerYAnchor.constraint(equalTo: pulse.centerYAnchor),
+            mic.widthAnchor.constraint(equalToConstant: 22),
+            mic.heightAnchor.constraint(equalToConstant: 22),
+
+            label.topAnchor.constraint(equalTo: pulse.bottomAnchor, constant: 14),
+            label.leadingAnchor.constraint(equalTo: hud.leadingAnchor, constant: 12),
+            label.trailingAnchor.constraint(equalTo: hud.trailingAnchor, constant: -12)
+        ])
+
+        let animation = CABasicAnimation(keyPath: "transform.scale")
+        animation.fromValue = 0.9
+        animation.toValue = 1.16
+        animation.duration = 0.55
+        animation.autoreverses = true
+        animation.repeatCount = .infinity
+        pulse.layer.add(animation, forKey: "recordingPulse")
+
+        recordingHUD = hud
+        recordingPulseView = pulse
+    }
+
+    private func hideRecordingHUD() {
+        recordingPulseView?.layer.removeAnimation(forKey: "recordingPulse")
+        recordingPulseView = nil
+        recordingHUD?.removeFromSuperview()
+        recordingHUD = nil
     }
 
     /// 图片：打开系统相册选择图片并插入聊天列表
@@ -473,24 +587,104 @@ class ChatViewController: UIViewController {
     }
 
     private func appendMessage(_ kind: ChatMessageKind, isMe: Bool) {
-        chatMessages.append(ChatMessageItem(kind: kind, isMe: isMe, time: "Just now"))
+        let item = ChatMessageItem(kind: kind, isMe: isMe, time: "Just now")
+        chatMessages.append(item)
+        saveMessages()
+        updateMessageList(with: item)
         tableView.reloadData()
         scrollToBottom()
     }
 
+    private func updateMessageList(with item: ChatMessageItem) {
+        guard let userId = chatUser?.userId else { return }
+        MockDataManager.shared.updateMessageSummary(
+            userId: userId,
+            lastMessage: previewText(for: item.kind),
+            time: item.time,
+            timestamp: Date().timeIntervalSince1970
+        )
+    }
+
+    private func previewText(for kind: ChatMessageKind) -> String {
+        switch kind {
+        case .text(let text):
+            return text
+        case .voice(_, let duration):
+            return "[Voice \(duration)s]"
+        case .image:
+            return "[Image]"
+        case .video:
+            return "[Video]"
+        case .gift(let gift, let count):
+            return "Sent \(gift.name) x\(count)"
+        }
+    }
+
     // MARK: - 数据
 
-    /// 加载 Mock 历史消息
+    /// 加载本地历史消息；新会话不塞预设消息
     private func loadMockMessages() {
-        chatMessages = [
-            ChatMessageItem(kind: .text("Hey, how are you?"), isMe: false, time: "10 min ago"),
-            ChatMessageItem(kind: .text("I'm good! Want to join my room?"), isMe: false, time: "9 min ago"),
-            ChatMessageItem(kind: .text("Sure! Which game?"), isMe: true, time: "8 min ago"),
-            ChatMessageItem(kind: .text("Let's play PUBG together!"), isMe: false, time: "7 min ago"),
-            ChatMessageItem(kind: .text("Sounds fun! I'll be there in 5"), isMe: true, time: "5 min ago")
-        ]
+        if let saved = loadSavedMessages() {
+            chatMessages = saved
+        } else if let chatUser, MockDataManager.shared.messages.contains(where: { $0.userId == chatUser.userId }) {
+            let latestText = chatUser.lastMessage
+            let latestTime = chatUser.time
+            chatMessages = [
+                ChatMessageItem(kind: .text("Hey, are you online?"), isMe: false, time: "18 min ago"),
+                ChatMessageItem(kind: .text("Yes, want to squad up?"), isMe: true, time: "12 min ago"),
+                ChatMessageItem(kind: .text(latestText), isMe: false, time: latestTime)
+            ]
+            saveMessages()
+        } else {
+            chatMessages = []
+        }
         tableView.reloadData()
         scrollToBottom()
+    }
+
+    private func saveMessages() {
+        let stored = chatMessages.compactMap { storedMessage(from: $0) }
+        guard let data = try? JSONEncoder().encode(stored) else { return }
+        UserDefaults.standard.set(data, forKey: storageKey)
+    }
+
+    private func loadSavedMessages() -> [ChatMessageItem]? {
+        guard let data = UserDefaults.standard.data(forKey: storageKey),
+              let stored = try? JSONDecoder().decode([StoredChatMessage].self, from: data) else { return nil }
+        return stored.map { chatMessage(from: $0) }
+    }
+
+    private func storedMessage(from item: ChatMessageItem) -> StoredChatMessage? {
+        switch item.kind {
+        case .text(let text):
+            return StoredChatMessage(kind: "text", text: text, duration: 0, giftName: "", giftCount: 0, isMe: item.isMe, time: item.time)
+        case .voice(_, let duration):
+            return StoredChatMessage(kind: "voice", text: "", duration: duration, giftName: "", giftCount: 0, isMe: item.isMe, time: item.time)
+        case .image:
+            return StoredChatMessage(kind: "image", text: "", duration: 0, giftName: "", giftCount: 0, isMe: item.isMe, time: item.time)
+        case .video:
+            return StoredChatMessage(kind: "video", text: "", duration: 0, giftName: "", giftCount: 0, isMe: item.isMe, time: item.time)
+        case .gift(let gift, let count):
+            return StoredChatMessage(kind: "gift", text: "", duration: 0, giftName: gift.name, giftCount: count, isMe: item.isMe, time: item.time)
+        }
+    }
+
+    private func chatMessage(from stored: StoredChatMessage) -> ChatMessageItem {
+        let kind: ChatMessageKind
+        switch stored.kind {
+        case "voice":
+            kind = .voice(url: URL(fileURLWithPath: ""), duration: stored.duration)
+        case "image":
+            kind = .text("[Image]")
+        case "video":
+            kind = .text("[Video]")
+        case "gift":
+            let gift = allGifts.first { $0.name == stored.giftName } ?? allGifts[0]
+            kind = .gift(gift, count: stored.giftCount)
+        default:
+            kind = .text(stored.text)
+        }
+        return ChatMessageItem(kind: kind, isMe: stored.isMe, time: stored.time)
     }
 
     /// 滚动到底部
@@ -506,11 +700,16 @@ class ChatViewController: UIViewController {
         present(alert, animated: true)
     }
 
+    private var voicePlayer: AVAudioPlayer?
+
     fileprivate func playVoice(url: URL) {
-        let player = AVPlayerViewController()
-        player.player = AVPlayer(url: url)
-        present(player, animated: true) {
-            player.player?.play()
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+            voicePlayer = try AVAudioPlayer(contentsOf: url)
+            voicePlayer?.play()
+        } catch {
+            showToast("Cannot play voice message")
         }
     }
 
@@ -579,7 +778,7 @@ extension ChatViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: ChatBubbleCell.reuseId, for: indexPath) as! ChatBubbleCell
         let msg = chatMessages[indexPath.row]
-        cell.configure(kind: msg.kind, isMe: msg.isMe)
+        cell.configure(kind: msg.kind, isMe: msg.isMe, avatarImage: msg.isMe ? myAvatarImage : peerAvatarImage)
         cell.onVoiceTap = { [weak self] url in self?.playVoice(url: url) }
         cell.onVideoTap = { [weak self] url in self?.playVideo(url: url) }
         return cell
@@ -601,6 +800,7 @@ extension ChatViewController: UITableViewDataSource, UITableViewDelegate {
         UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
             let delete = UIAction(title: "Delete", image: UIImage(systemName: "trash"), attributes: .destructive) { _ in
                 self?.chatMessages.remove(at: indexPath.row)
+                self?.saveMessages()
                 tableView.deleteRows(at: [indexPath], with: .automatic)
             }
             return UIMenu(children: [delete])
@@ -621,6 +821,15 @@ extension ChatViewController: UITextFieldDelegate {
 class ChatBubbleCell: UITableViewCell {
     static let reuseId = "ChatBubbleCell"
 
+    private let avatarImageView: UIImageView = {
+        let iv = UIImageView()
+        iv.contentMode = .scaleAspectFill
+        iv.layer.cornerRadius = 18
+        iv.layer.masksToBounds = true
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        return iv
+    }()
+
     /// 气泡容器
     private let bubbleView: UIView = {
         let v = UIView()
@@ -640,6 +849,8 @@ class ChatBubbleCell: UITableViewCell {
 
     private var leadingConstraint: NSLayoutConstraint?
     private var trailingConstraint: NSLayoutConstraint?
+    private var avatarLeadingConstraint: NSLayoutConstraint?
+    private var avatarTrailingConstraint: NSLayoutConstraint?
     var onVoiceTap: ((URL) -> Void)?
     var onVideoTap: ((URL) -> Void)?
 
@@ -648,13 +859,18 @@ class ChatBubbleCell: UITableViewCell {
         backgroundColor = .clear
         selectionStyle = .none
 
+        contentView.addSubview(avatarImageView)
         contentView.addSubview(bubbleView)
         bubbleView.addSubview(contentStack)
 
         NSLayoutConstraint.activate([
+            avatarImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+            avatarImageView.widthAnchor.constraint(equalToConstant: 36),
+            avatarImageView.heightAnchor.constraint(equalToConstant: 36),
+
             bubbleView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 5),
             bubbleView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -5),
-            bubbleView.widthAnchor.constraint(lessThanOrEqualTo: contentView.widthAnchor, multiplier: 0.72),
+            bubbleView.widthAnchor.constraint(lessThanOrEqualTo: contentView.widthAnchor, multiplier: 0.68),
 
             contentStack.topAnchor.constraint(equalTo: bubbleView.topAnchor, constant: 9),
             contentStack.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor, constant: 12),
@@ -662,8 +878,10 @@ class ChatBubbleCell: UITableViewCell {
             contentStack.bottomAnchor.constraint(equalTo: bubbleView.bottomAnchor, constant: -9)
         ])
 
-        leadingConstraint = bubbleView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16)
-        trailingConstraint = bubbleView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16)
+        leadingConstraint = bubbleView.leadingAnchor.constraint(equalTo: avatarImageView.trailingAnchor, constant: 8)
+        trailingConstraint = bubbleView.trailingAnchor.constraint(equalTo: avatarImageView.leadingAnchor, constant: -8)
+        avatarLeadingConstraint = avatarImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16)
+        avatarTrailingConstraint = avatarImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16)
     }
 
     required init?(coder: NSCoder) {
@@ -671,16 +889,20 @@ class ChatBubbleCell: UITableViewCell {
     }
 
     /// 配置气泡内容：文本/语音/图片/视频/礼物
-    fileprivate func configure(kind: ChatViewController.ChatMessageKind, isMe: Bool) {
+    fileprivate func configure(kind: ChatViewController.ChatMessageKind, isMe: Bool, avatarImage: String) {
+        avatarImageView.image = UIImage.playTalkImage(namedOrPath: avatarImage)
+        avatarLeadingConstraint?.isActive = !isMe
+        avatarTrailingConstraint?.isActive = isMe
         contentStack.arrangedSubviews.forEach { view in
             contentStack.removeArrangedSubview(view)
             view.removeFromSuperview()
         }
 
         let isBareMedia: Bool
-        if case .image = kind {
+        switch kind {
+        case .image, .video:
             isBareMedia = true
-        } else {
+        default:
             isBareMedia = false
         }
 
@@ -737,24 +959,75 @@ class ChatBubbleCell: UITableViewCell {
     private func addVoice(url: URL, duration: Int, textColor: UIColor) {
         let button = UIButton(type: .system)
         button.tintColor = textColor
-        button.setImage(UIImage(named: "ic_voice") ?? UIImage(systemName: "mic.fill"), for: .normal)
-        button.setTitle("  Voice message  \(duration)s", for: .normal)
-        button.setTitleColor(textColor, for: .normal)
-        button.titleLabel?.font = Theme.Fonts.medium(14)
         button.contentHorizontalAlignment = .leading
         button.addAction(UIAction { [weak self] _ in
             self?.onVoiceTap?(url)
         }, for: .touchUpInside)
+
+        let row = UIStackView()
+        row.axis = .horizontal
+        row.alignment = .center
+        row.spacing = 8
+        row.isUserInteractionEnabled = false
+        row.translatesAutoresizingMaskIntoConstraints = false
+
+        let icon = UIImageView(image: UIImage(systemName: "waveform"))
+        icon.tintColor = textColor
+        icon.contentMode = .scaleAspectFit
+        icon.translatesAutoresizingMaskIntoConstraints = false
+
+        let label = UILabel()
+        label.text = "Voice message"
+        label.font = Theme.Fonts.medium(14)
+        label.textColor = textColor
+
+        let durationLabel = UILabel()
+        durationLabel.text = "\(duration)s"
+        durationLabel.font = Theme.Fonts.bold(14)
+        durationLabel.textColor = textColor
+
+        row.addArrangedSubview(icon)
+        row.addArrangedSubview(label)
+        row.addArrangedSubview(durationLabel)
+        button.addSubview(row)
+
+        NSLayoutConstraint.activate([
+            button.widthAnchor.constraint(equalToConstant: 168),
+            button.heightAnchor.constraint(equalToConstant: 34),
+            icon.widthAnchor.constraint(equalToConstant: 22),
+            icon.heightAnchor.constraint(equalToConstant: 22),
+            row.leadingAnchor.constraint(equalTo: button.leadingAnchor),
+            row.trailingAnchor.constraint(equalTo: button.trailingAnchor),
+            row.topAnchor.constraint(equalTo: button.topAnchor),
+            row.bottomAnchor.constraint(equalTo: button.bottomAnchor)
+        ])
+
         contentStack.addArrangedSubview(button)
     }
 
     private func addImage(_ image: UIImage) {
         let imageView = UIImageView(image: image)
-        imageView.contentMode = .scaleAspectFill
+        imageView.contentMode = .scaleAspectFit
         imageView.clipsToBounds = true
         imageView.layer.cornerRadius = 10
-        imageView.widthAnchor.constraint(equalToConstant: 190).isActive = true
-        imageView.heightAnchor.constraint(equalToConstant: 140).isActive = true
+
+        // 根据图片宽高比自适应，限制最大尺寸
+        let maxWidth: CGFloat = 190
+        let maxHeight: CGFloat = 260
+        let ratio = image.size.width / max(image.size.height, 1)
+        let displayWidth: CGFloat
+        let displayHeight: CGFloat
+        if ratio >= 1 {
+            // 横图/方图
+            displayWidth = maxWidth
+            displayHeight = min(maxWidth / ratio, maxHeight)
+        } else {
+            // 竖图
+            displayHeight = maxHeight
+            displayWidth = min(maxHeight * ratio, maxWidth)
+        }
+        imageView.widthAnchor.constraint(equalToConstant: displayWidth).isActive = true
+        imageView.heightAnchor.constraint(equalToConstant: displayHeight).isActive = true
         contentStack.addArrangedSubview(imageView)
     }
 
@@ -763,18 +1036,19 @@ class ChatBubbleCell: UITableViewCell {
         button.backgroundColor = Theme.Colors.cardBackground
         button.layer.cornerRadius = 12
         button.clipsToBounds = true
-        button.widthAnchor.constraint(equalToConstant: 190).isActive = true
-        button.heightAnchor.constraint(equalToConstant: 130).isActive = true
         button.addAction(UIAction { [weak self] _ in
             self?.onVideoTap?(url)
         }, for: .touchUpInside)
 
-        if let thumbnail {
-            button.setBackgroundImage(thumbnail, for: .normal)
-        }
+        let imageView = UIImageView(image: thumbnail)
+        imageView.backgroundColor = Theme.Colors.cardBackground
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.isUserInteractionEnabled = false
+        imageView.translatesAutoresizingMaskIntoConstraints = false
 
         let overlay = UIView()
-        overlay.backgroundColor = UIColor.black.withAlphaComponent(0.28)
+        overlay.backgroundColor = UIColor.black.withAlphaComponent(0.24)
         overlay.isUserInteractionEnabled = false
         overlay.translatesAutoresizingMaskIntoConstraints = false
 
@@ -785,28 +1059,51 @@ class ChatBubbleCell: UITableViewCell {
         playIcon.translatesAutoresizingMaskIntoConstraints = false
 
         let label = UILabel()
-        label.text = "Video message"
-        label.font = Theme.Fonts.medium(14)
+        label.text = "Video"
+        label.font = Theme.Fonts.medium(13)
         label.textColor = .white
         label.isUserInteractionEnabled = false
         label.translatesAutoresizingMaskIntoConstraints = false
 
+        button.addSubview(imageView)
         button.addSubview(overlay)
         button.addSubview(playIcon)
         button.addSubview(label)
+
+        let size = videoPreviewSize(for: thumbnail)
         NSLayoutConstraint.activate([
+            button.widthAnchor.constraint(equalToConstant: size.width),
+            button.heightAnchor.constraint(equalToConstant: size.height),
+            imageView.topAnchor.constraint(equalTo: button.topAnchor),
+            imageView.leadingAnchor.constraint(equalTo: button.leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: button.trailingAnchor),
+            imageView.bottomAnchor.constraint(equalTo: button.bottomAnchor),
             overlay.topAnchor.constraint(equalTo: button.topAnchor),
             overlay.leadingAnchor.constraint(equalTo: button.leadingAnchor),
             overlay.trailingAnchor.constraint(equalTo: button.trailingAnchor),
             overlay.bottomAnchor.constraint(equalTo: button.bottomAnchor),
             playIcon.centerXAnchor.constraint(equalTo: button.centerXAnchor),
-            playIcon.centerYAnchor.constraint(equalTo: button.centerYAnchor, constant: -8),
-            playIcon.widthAnchor.constraint(equalToConstant: 42),
-            playIcon.heightAnchor.constraint(equalToConstant: 42),
-            label.topAnchor.constraint(equalTo: playIcon.bottomAnchor, constant: 6),
-            label.centerXAnchor.constraint(equalTo: button.centerXAnchor)
+            playIcon.centerYAnchor.constraint(equalTo: button.centerYAnchor),
+            playIcon.widthAnchor.constraint(equalToConstant: 44),
+            playIcon.heightAnchor.constraint(equalToConstant: 44),
+            label.leadingAnchor.constraint(equalTo: button.leadingAnchor, constant: 10),
+            label.bottomAnchor.constraint(equalTo: button.bottomAnchor, constant: -8)
         ])
         contentStack.addArrangedSubview(button)
+    }
+
+    private func videoPreviewSize(for thumbnail: UIImage?) -> CGSize {
+        guard let thumbnail, thumbnail.size.width > 0, thumbnail.size.height > 0 else {
+            return CGSize(width: 190, height: 130)
+        }
+        let ratio = thumbnail.size.width / thumbnail.size.height
+        if ratio < 0.85 {
+            return CGSize(width: 150, height: 220)
+        }
+        if ratio > 1.2 {
+            return CGSize(width: 220, height: 140)
+        }
+        return CGSize(width: 180, height: 180)
     }
 
     private func addGift(gift: Gift, count: Int, textColor: UIColor) {

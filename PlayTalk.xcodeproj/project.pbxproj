@@ -9,6 +9,10 @@
 /* Begin PBXBuildFile section */
 		01B2B3B858D344E09F66C0A1 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F8A8E8202A7F4B0295E7A234 /* LaunchScreen.storyboard */; };
 		02E7F5B36A2C4A9FB63B5D9E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C5317B0D6D6A4BD7A8D4C31C /* Assets.xcassets */; };
+		0B8E4A19C61A4E2A8D1F9201 /* privacy-policy.html in Resources */ = {isa = PBXBuildFile; fileRef = 3E6F6A91B8F24A5B9A120801 /* privacy-policy.html */; };
+		0B8E4A19C61A4E2A8D1F9202 /* terms-of-service.html in Resources */ = {isa = PBXBuildFile; fileRef = 3E6F6A91B8F24A5B9A120802 /* terms-of-service.html */; };
+		0B8E4A19C61A4E2A8D1F9203 /* about-playtalk.html in Resources */ = {isa = PBXBuildFile; fileRef = 3E6F6A91B8F24A5B9A120803 /* about-playtalk.html */; };
+		0C4A7E11F9364A31A82DF001 /* AppIcons in Resources */ = {isa = PBXBuildFile; fileRef = 0C4A7E10F9364A31A82DF001 /* AppIcons */; };
 		05B8C3F3911A4E8FA64C1D29 /* LegalTextViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D4B7A2E6C9F41D0A13B5E7C /* LegalTextViewController.swift */; };
 		064D7C58E6074C608CE1C947 /* SplashViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F33D0C3A5D94E3A97B6F21A /* SplashViewController.swift */; };
 		0A0E331D4C0A4E8791D90E8B /* NavigationHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6E6B2B1DB1E4C5789E3F3A2 /* NavigationHelper.swift */; };
@@ -41,6 +45,9 @@
 		7BA9B6CCF282108A809EDCF9 /* VoiceRoom.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceRoom.swift; sourceTree = "<group>"; };
 		8602F85E89846993B7BC6BD4 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		8D4B7A2E6C9F41D0A13B5E7C /* LegalTextViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalTextViewController.swift; sourceTree = "<group>"; };
+		3E6F6A91B8F24A5B9A120801 /* privacy-policy.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "privacy-policy.html"; sourceTree = "<group>"; };
+		3E6F6A91B8F24A5B9A120802 /* terms-of-service.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "terms-of-service.html"; sourceTree = "<group>"; };
+		3E6F6A91B8F24A5B9A120803 /* about-playtalk.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = "about-playtalk.html"; sourceTree = "<group>"; };
 		8B06134207E8189B4040186D /* PlayTalk.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PlayTalk.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		91B35BADA38261C906ACFA2A /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		A6E6B2B1DB1E4C5789E3F3A2 /* NavigationHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationHelper.swift; sourceTree = "<group>"; };
@@ -51,6 +58,7 @@
 		B3AEB4801F6C78AF68334AD4 /* MessageCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageCell.swift; sourceTree = "<group>"; };
 		DFB50AB24D2AD72450212298 /* MainTabBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabBarController.swift; sourceTree = "<group>"; };
 		C5317B0D6D6A4BD7A8D4C31C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		0C4A7E10F9364A31A82DF001 /* AppIcons */ = {isa = PBXFileReference; lastKnownFileType = folder; path = AppIcons; sourceTree = "<group>"; };
 		F503FB79E5F4450FEB4E8617 /* MockDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDataManager.swift; sourceTree = "<group>"; };
 		F8A8E8202A7F4B0295E7A234 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -105,6 +113,16 @@
 			path = PlayTalk/Common;
 			sourceTree = "<group>";
 		};
+		77A4B6F2C5D44E54A873C901 /* Legal */ = {
+			isa = PBXGroup;
+			children = (
+				3E6F6A91B8F24A5B9A120801 /* privacy-policy.html */,
+				3E6F6A91B8F24A5B9A120802 /* terms-of-service.html */,
+				3E6F6A91B8F24A5B9A120803 /* about-playtalk.html */,
+			);
+			path = Legal;
+			sourceTree = "<group>";
+		};
 		9F79749DE8D38E054CF968DB /* App */ = {
 			isa = PBXGroup;
 			children = (
@@ -134,7 +152,9 @@
 				61FD9C75CCB7432FBAB5986A /* Common */,
 				D6451EDC6628E5A705AEA92E /* Models */,
 				517A981B57DCA48EEF8F0296 /* Modules */,
+				77A4B6F2C5D44E54A873C901 /* Legal */,
 				C5317B0D6D6A4BD7A8D4C31C /* Assets.xcassets */,
+				0C4A7E10F9364A31A82DF001 /* AppIcons */,
 				F8A8E8202A7F4B0295E7A234 /* LaunchScreen.storyboard */,
 				EA82871282AC206F588A101E /* Products */,
 			);
@@ -220,6 +240,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				02E7F5B36A2C4A9FB63B5D9E /* Assets.xcassets in Resources */,
+				0C4A7E11F9364A31A82DF001 /* AppIcons in Resources */,
+				0B8E4A19C61A4E2A8D1F9201 /* privacy-policy.html in Resources */,
+				0B8E4A19C61A4E2A8D1F9202 /* terms-of-service.html in Resources */,
+				0B8E4A19C61A4E2A8D1F9203 /* about-playtalk.html in Resources */,
 				01B2B3B858D344E09F66C0A1 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

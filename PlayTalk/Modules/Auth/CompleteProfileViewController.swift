@@ -41,7 +41,7 @@ class CompleteProfileViewController: UIViewController {
     /// 昵称输入框（对应 Android et_nickname）
     private let nicknameField: UITextField = {
         let tf = UITextField()
-        tf.placeholder = "Nickname"
+        tf.attributedPlaceholder = NSAttributedString(string: "Nickname", attributes: [.foregroundColor: UIColor.lightGray])
         tf.textColor = Theme.Colors.textPrimary
         tf.font = Theme.Fonts.regular(16)
         tf.backgroundColor = Theme.Colors.cardBackground

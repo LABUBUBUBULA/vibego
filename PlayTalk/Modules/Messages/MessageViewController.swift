@@ -39,6 +39,12 @@ class MessageViewController: UIViewController {
         setupUI()
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        messages = MockDataManager.shared.messages
+        messageTableView.reloadData()
+    }
+
     // MARK: - 界面搭建
 
     private func setupUI() {
@@ -52,7 +58,7 @@ class MessageViewController: UIViewController {
             buttonsContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
             buttonsContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             buttonsContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            buttonsContainer.heightAnchor.constraint(equalToConstant: 88),
+            buttonsContainer.heightAnchor.constraint(equalToConstant: 104),
 
             // 消息列表
             messageTableView.topAnchor.constraint(equalTo: buttonsContainer.bottomAnchor, constant: 16),
@@ -116,9 +122,9 @@ class MessageViewController: UIViewController {
 
         NSLayoutConstraint.activate([
             iconView.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            iconView.topAnchor.constraint(equalTo: container.topAnchor, constant: 4),
-            iconView.widthAnchor.constraint(equalToConstant: 44),
-            iconView.heightAnchor.constraint(equalToConstant: 44),
+            iconView.topAnchor.constraint(equalTo: container.topAnchor, constant: 2),
+            iconView.widthAnchor.constraint(equalToConstant: 60),
+            iconView.heightAnchor.constraint(equalToConstant: 60),
 
             titleLabel.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: 8),
             titleLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor)
@@ -192,6 +198,10 @@ extension MessageViewController: UITableViewDataSource, UITableViewDelegate {
     /// 点击消息进入聊天页面（对应 Android ChatActivity）
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
+        let message = messages[indexPath.row]
+        MockDataManager.shared.markMessageRead(userId: message.userId)
+        messages[indexPath.row].unreadCount = 0
+        tableView.reloadRows(at: [indexPath], with: .none)
         let vc = ChatViewController()
         vc.chatUser = messages[indexPath.row]
         pushAppViewController(vc, animated: true)
@@ -203,7 +213,7 @@ extension MessageViewController: UITableViewDataSource, UITableViewDelegate {
             guard let self else { return }
             let message = self.messages[indexPath.row]
             let vc = UserProfileViewController()
-            vc.user = MockDataManager.shared.users.first { $0.id == message.userId } ?? User(
+            let fallbackUser = User(
                 id: message.userId,
                 name: message.name,
                 avatarImage: message.avatarImage,
@@ -213,9 +223,10 @@ extension MessageViewController: UITableViewDataSource, UITableViewDelegate {
                 countryFlag: "",
                 level: message.level,
                 backgroundImage: "bg_\(abs(message.userId) % 20 + 1)",
-                isFollowing: false,
+                isFollowing: MockDataManager.shared.isFollowing(userId: message.userId),
                 interests: "PUBG"
             )
+            vc.user = MockDataManager.shared.user(withId: message.userId) ?? fallbackUser
             self.pushAppViewController(vc, animated: true)
             completion(true)
         }

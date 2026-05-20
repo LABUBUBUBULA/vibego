@@ -1,15 +1,20 @@
 import UIKit
+import PhotosUI
 
 /// 创建帖子页 - 对应 Android GameMic 的 CreatePostActivity
-/// 表单：标题 + 内容 + 游戏标签选择 + 发布按钮
+/// 表单：标题 + 内容 + 图片选择 + 游戏标签选择 + 发布按钮
 class CreatePostViewController: UIViewController {
 
     // MARK: - 状态
 
-    /// 选中的游戏标签
-    private var selectedTag: String = "PUBG"
-    private let gameTags = ["PUBG", "Minecraft", "Fortnite", "TheSims"]
-    private var tagButtons: [UIButton] = []
+    /// 游戏标签（由上级页面传入）
+    var gameTag: String = "PUBG"
+
+    /// 已选图片（最多4张）
+    private var selectedImages: [(image: UIImage, uri: String)] = []
+
+    /// 发布成功回调
+    var onPostCreated: ((Post) -> Void)?
 
     // MARK: - UI 组件
 
@@ -39,12 +44,20 @@ class CreatePostViewController: UIViewController {
         return tv
     }()
 
-    /// 标签选择容器
-    private let tagStack: UIStackView = {
+    /// 图片区域滚动容器
+    private let imageScrollView: UIScrollView = {
+        let sv = UIScrollView()
+        sv.showsHorizontalScrollIndicator = false
+        sv.translatesAutoresizingMaskIntoConstraints = false
+        return sv
+    }()
+
+    /// 图片缩略图 + 添加按钮 横向 stack
+    private let imageStack: UIStackView = {
         let sv = UIStackView()
         sv.axis = .horizontal
-        sv.spacing = 8
-        sv.distribution = .fillEqually
+        sv.spacing = 10
+        sv.alignment = .center
         sv.translatesAutoresizingMaskIntoConstraints = false
         return sv
     }()
@@ -68,7 +81,6 @@ class CreatePostViewController: UIViewController {
         title = "Create Post"
         view.backgroundColor = Theme.Colors.darkBackground
         setupUI()
-        setupGameTags()
         publishButton.addTarget(self, action: #selector(publishTapped), for: .touchUpInside)
     }
 
@@ -77,7 +89,8 @@ class CreatePostViewController: UIViewController {
     private func setupUI() {
         view.addSubview(titleField)
         view.addSubview(contentTextView)
-        view.addSubview(tagStack)
+        view.addSubview(imageScrollView)
+        imageScrollView.addSubview(imageStack)
         view.addSubview(publishButton)
 
         NSLayoutConstraint.activate([
@@ -89,56 +102,174 @@ class CreatePostViewController: UIViewController {
             contentTextView.topAnchor.constraint(equalTo: titleField.bottomAnchor, constant: 12),
             contentTextView.leadingAnchor.constraint(equalTo: titleField.leadingAnchor),
             contentTextView.trailingAnchor.constraint(equalTo: titleField.trailingAnchor),
-            contentTextView.heightAnchor.constraint(equalToConstant: 200),
+            contentTextView.heightAnchor.constraint(equalToConstant: 160),
 
-            tagStack.topAnchor.constraint(equalTo: contentTextView.bottomAnchor, constant: 16),
-            tagStack.leadingAnchor.constraint(equalTo: titleField.leadingAnchor),
-            tagStack.trailingAnchor.constraint(equalTo: titleField.trailingAnchor),
-            tagStack.heightAnchor.constraint(equalToConstant: 36),
+            // 图片区域
+            imageScrollView.topAnchor.constraint(equalTo: contentTextView.bottomAnchor, constant: 12),
+            imageScrollView.leadingAnchor.constraint(equalTo: titleField.leadingAnchor),
+            imageScrollView.trailingAnchor.constraint(equalTo: titleField.trailingAnchor),
+            imageScrollView.heightAnchor.constraint(equalToConstant: 88),
 
-            publishButton.topAnchor.constraint(equalTo: tagStack.bottomAnchor, constant: 32),
+            imageStack.topAnchor.constraint(equalTo: imageScrollView.topAnchor),
+            imageStack.leadingAnchor.constraint(equalTo: imageScrollView.leadingAnchor),
+            imageStack.trailingAnchor.constraint(equalTo: imageScrollView.trailingAnchor),
+            imageStack.bottomAnchor.constraint(equalTo: imageScrollView.bottomAnchor),
+            imageStack.heightAnchor.constraint(equalTo: imageScrollView.heightAnchor),
+
+            publishButton.topAnchor.constraint(equalTo: imageScrollView.bottomAnchor, constant: 28),
             publishButton.leadingAnchor.constraint(equalTo: titleField.leadingAnchor),
             publishButton.trailingAnchor.constraint(equalTo: titleField.trailingAnchor),
             publishButton.heightAnchor.constraint(equalToConstant: 50)
         ])
+
+        rebuildImageStack()
     }
 
-    /// 创建游戏标签按钮
-    private func setupGameTags() {
-        for (index, tag) in gameTags.enumerated() {
-            let btn = UIButton(type: .system)
-            btn.setTitle(tag, for: .normal)
-            btn.titleLabel?.font = Theme.Fonts.medium(12)
-            btn.layer.cornerRadius = 18
-            btn.tag = index
-            btn.addTarget(self, action: #selector(tagTapped(_:)), for: .touchUpInside)
-            tagStack.addArrangedSubview(btn)
-            tagButtons.append(btn)
+
+
+    // MARK: - 图片区域
+
+    /// 重建图片横向列表（Add 按钮 + 已选缩略图）
+    private func rebuildImageStack() {
+        imageStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+
+        // 已选缩略图
+        for (index, item) in selectedImages.enumerated() {
+            let container = UIView()
+            container.translatesAutoresizingMaskIntoConstraints = false
+
+            let iv = UIImageView(image: item.image)
+            iv.contentMode = .scaleAspectFill
+            iv.layer.cornerRadius = 8
+            iv.layer.masksToBounds = true
+            iv.translatesAutoresizingMaskIntoConstraints = false
+
+            let del = UIButton(type: .system)
+            del.setImage(UIImage(systemName: "xmark.circle.fill"), for: .normal)
+            del.tintColor = .white
+            del.tag = index
+            del.translatesAutoresizingMaskIntoConstraints = false
+            del.addTarget(self, action: #selector(removeImageTapped(_:)), for: .touchUpInside)
+
+            container.addSubview(iv)
+            container.addSubview(del)
+
+            NSLayoutConstraint.activate([
+                container.widthAnchor.constraint(equalToConstant: 80),
+                iv.topAnchor.constraint(equalTo: container.topAnchor),
+                iv.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+                iv.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+                iv.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+                del.topAnchor.constraint(equalTo: container.topAnchor, constant: 2),
+                del.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -2),
+                del.widthAnchor.constraint(equalToConstant: 22),
+                del.heightAnchor.constraint(equalToConstant: 22)
+            ])
+            imageStack.addArrangedSubview(container)
         }
-        updateTagUI()
-    }
 
-    @objc private func tagTapped(_ sender: UIButton) {
-        selectedTag = gameTags[sender.tag]
-        updateTagUI()
-    }
-
-    private func updateTagUI() {
-        for (index, btn) in tagButtons.enumerated() {
-            if gameTags[index] == selectedTag {
-                btn.backgroundColor = Theme.Colors.primaryYellow
-                btn.setTitleColor(Theme.Colors.darkerBackground, for: .normal)
-            } else {
-                btn.backgroundColor = Theme.Colors.cardBackground
-                btn.setTitleColor(Theme.Colors.textSecondary, for: .normal)
-            }
+        // 最多4张时才显示添加按钮
+        if selectedImages.count < 4 {
+            let addBtn = UIButton(type: .system)
+            addBtn.setImage(UIImage(systemName: "plus.square.dashed"), for: .normal)
+            addBtn.tintColor = Theme.Colors.primaryYellow
+            addBtn.backgroundColor = Theme.Colors.cardBackground
+            addBtn.layer.cornerRadius = 8
+            addBtn.translatesAutoresizingMaskIntoConstraints = false
+            addBtn.addTarget(self, action: #selector(addImageTapped), for: .touchUpInside)
+            NSLayoutConstraint.activate([
+                addBtn.widthAnchor.constraint(equalToConstant: 80),
+                addBtn.heightAnchor.constraint(equalToConstant: 80)
+            ])
+            imageStack.addArrangedSubview(addBtn)
         }
+    }
+
+    @objc private func addImageTapped() {
+        var config = PHPickerConfiguration(photoLibrary: .shared())
+        config.filter = .images
+        config.selectionLimit = 4 - selectedImages.count
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = self
+        present(picker, animated: true)
+    }
+
+    @objc private func removeImageTapped(_ sender: UIButton) {
+        let index = sender.tag
+        guard selectedImages.indices.contains(index) else { return }
+        selectedImages.remove(at: index)
+        rebuildImageStack()
+    }
+
+    private func saveImage(_ image: UIImage) -> String? {
+        guard let data = image.jpegData(compressionQuality: 0.85) else { return nil }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("post_img_\(UUID().uuidString).jpg")
+        try? data.write(to: url)
+        return url.path
     }
 
     /// 发布帖子
     @objc private func publishTapped() {
-        guard let postTitle = titleField.text, !postTitle.isEmpty else { return }
-        // Mock: 直接返回
+        guard let postTitle = titleField.text, !postTitle.isEmpty else {
+            showToast("Please enter a title")
+            return
+        }
+        let user = UserManager.shared.currentUser ?? MockDataManager.shared.users[0]
+        let newPost = Post(
+            id: Int.random(in: 10000...99999),
+            authorId: "\(user.id)",
+            authorName: user.name,
+            authorAvatar: user.avatarImage,
+            authorAvatarUri: user.avatarUri,
+            time: "Just now",
+            title: postTitle,
+            content: contentTextView.text ?? "",
+            images: [],
+            imageUris: selectedImages.map { $0.uri },
+            viewCount: 0,
+            commentCount: 0,
+            likeCount: 0,
+            isLiked: false,
+            isFollowing: false,
+            gameTag: gameTag
+        )
+        MockDataManager.shared.addUserPost(newPost)
+        onPostCreated?(newPost)
+        showToast("Post published!")
         navigationController?.popViewController(animated: true)
+    }
+}
+
+// MARK: - PHPickerViewControllerDelegate
+extension CreatePostViewController: PHPickerViewControllerDelegate {
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        picker.dismiss(animated: true)
+        let group = DispatchGroup()
+        var loaded: [(index: Int, image: UIImage)] = []
+
+        for (i, result) in results.enumerated() {
+            guard result.itemProvider.canLoadObject(ofClass: UIImage.self) else { continue }
+            group.enter()
+            result.itemProvider.loadObject(ofClass: UIImage.self) { obj, _ in
+                // 在当前线程完成类型转换，不跨隔离边界传 obj
+                let img = obj as? UIImage
+                DispatchQueue.main.async {
+                    if let img {
+                        loaded.append((i, img))
+                    }
+                    group.leave()
+                }
+            }
+        }
+
+        group.notify(queue: .main) { [weak self] in
+            guard let self else { return }
+            for item in loaded.sorted(by: { $0.index < $1.index }) {
+                let uri = self.saveImage(item.image) ?? ""
+                self.selectedImages.append((image: item.image, uri: uri))
+            }
+            self.rebuildImageStack()
+        }
     }
 }

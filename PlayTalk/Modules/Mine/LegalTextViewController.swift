@@ -1,4 +1,5 @@
 import UIKit
+import WebKit
 
 final class LegalTextViewController: UIViewController {
 
@@ -6,20 +7,42 @@ final class LegalTextViewController: UIViewController {
         case terms
         case privacy
         case about
+
+        var pageTitle: String {
+            switch self {
+            case .terms:
+                return "Terms of Service"
+            case .privacy:
+                return "Privacy Policy"
+            case .about:
+                return "About"
+            }
+        }
+
+        /// 本地 HTML 路由名：以后要换线上路由或 Web 链接，只改这里映射。
+        var htmlRoute: String {
+            switch self {
+            case .terms:
+                return "terms-of-service"
+            case .privacy:
+                return "privacy-policy"
+            case .about:
+                return "about-playtalk"
+            }
+        }
     }
 
     private let type: PageType
 
-    private lazy var textView: UITextView = {
-        let tv = UITextView()
-        tv.backgroundColor = Theme.Colors.darkBackground
-        tv.textColor = Theme.Colors.textPrimary
-        tv.font = Theme.Fonts.regular(15)
-        tv.isEditable = false
-        tv.alwaysBounceVertical = true
-        tv.textContainerInset = UIEdgeInsets(top: 20, left: 16, bottom: 32, right: 16)
-        tv.translatesAutoresizingMaskIntoConstraints = false
-        return tv
+    /// 使用 WKWebView 读取本地 HTML 文件，不把协议正文写在 Swift 里。
+    private lazy var webView: WKWebView = {
+        let config = WKWebViewConfiguration()
+        let view = WKWebView(frame: .zero, configuration: config)
+        view.backgroundColor = Theme.Colors.darkBackground
+        view.scrollView.backgroundColor = Theme.Colors.darkBackground
+        view.isOpaque = false
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
     }()
 
     init(type: PageType) {
@@ -34,71 +57,46 @@ final class LegalTextViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = Theme.Colors.darkBackground
-        configureContent()
         setupUI()
+        loadHTMLRoute()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(false, animated: animated)
     }
 
     private func setupUI() {
-        view.addSubview(textView)
+        title = type.pageTitle
+        navigationItem.leftBarButtonItem = makeAppBackButton(action: #selector(backTapped))
+
+        view.addSubview(webView)
         NSLayoutConstraint.activate([
-            textView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            textView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            textView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            textView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            webView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            webView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
 
-    private func configureContent() {
-        switch type {
-        case .terms:
-            title = "Terms of Service"
-            textView.text = """
-            Terms of Service
-
-            Welcome to PlayTalk. By using this app, you agree to use voice rooms, chat, forum posts, gifts, and profile features responsibly.
-
-            1. Account
-            You are responsible for your account activity. Do not impersonate others, harass users, or share illegal content.
-
-            2. Voice Rooms and Chat
-            Keep conversations respectful. PlayTalk may remove content or restrict accounts that violate community rules.
-
-            3. Virtual Items
-            Coins, gifts, and other virtual items are mock app features in this build. They have no cash value unless connected to official payment services.
-
-            4. Service Changes
-            Features may change as PlayTalk evolves. Continued use means you accept updated terms.
-            """
-        case .privacy:
-            title = "Privacy Policy"
-            textView.text = """
-            Privacy Policy
-
-            PlayTalk is a social voice chat app. This iOS build uses local mock data and does not connect to a production backend.
-
-            1. Profile Data
-            Display name, avatar, bio, interests, level, and room activity are used to render social features.
-
-            2. Messages and Rooms
-            Mock messages, room history, and collections are stored in app memory for demo behavior.
-
-            3. Payments
-            Recharge screens are placeholders unless official in-app purchase integration is enabled.
-
-            4. Account Deletion
-            Delete Account clears current local session and returns to sign-in.
-            """
-        case .about:
-            title = "About"
-            textView.text = """
-            PlayTalk
-
-            Version 1.0.0
-
-            PlayTalk is a game voice social app with voice rooms, private chat, game forums, user profiles, levels, gifts, collections, and browsing history.
-
-            This iOS version is adapted from Android behavior and currently uses mock data for product preview.
-            """
+    private func loadHTMLRoute() {
+        if let fileURL = Bundle.main.url(forResource: type.htmlRoute, withExtension: "html") {
+            webView.loadFileURL(fileURL, allowingReadAccessTo: fileURL.deletingLastPathComponent())
+            return
         }
+
+        // 防止资源没加入 target 时白屏，方便定位路由/资源配置问题。
+        let fallbackHTML = """
+        <!doctype html>
+        <html><body style="margin:0;padding:24px;background:#12121C;color:#F5F5FA;font-family:-apple-system;">
+        <h1 style="color:#FFE800;">Page not found</h1>
+        <p>Missing local HTML route: \(type.htmlRoute).html</p>
+        </body></html>
+        """
+        webView.loadHTMLString(fallbackHTML, baseURL: nil)
+    }
+
+    @objc private func backTapped() {
+        navigationController?.popViewController(animated: true)
     }
 }

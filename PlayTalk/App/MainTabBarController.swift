@@ -4,8 +4,14 @@ class MainTabBarController: UITabBarController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        delegate = self
         setupTabBar()
         setupViewControllers()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: animated)
     }
 
     private func setupTabBar() {
@@ -68,5 +74,11 @@ class MainTabBarController: UITabBarController {
         )
 
         viewControllers = [homeVC, forumVC, messageVC, mineVC]
+    }
+}
+
+extension MainTabBarController: UITabBarControllerDelegate {
+    func tabBarController(_ tabBarController: UITabBarController, didSelect viewController: UIViewController) {
+        navigationController?.setNavigationBarHidden(true, animated: false)
     }
 }

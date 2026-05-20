@@ -86,25 +86,15 @@ class ForumViewController: UIViewController {
 
     // MARK: - 横幅视图
 
-    /// 创建横幅区域（对应 Android 的 banner image 120dp）
+    /// 创建横幅区域（对应 Android 的 @drawable/ic_forum）
     private func createBannerView() -> UIView {
-        let view = UIView()
-        view.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.15)
-        view.layer.cornerRadius = Theme.Dimensions.cornerRadius
-        view.translatesAutoresizingMaskIntoConstraints = false
-
-        let label = UILabel()
-        label.text = "🎮 Game Forum"
-        label.font = Theme.Fonts.bold(24)
-        label.textColor = Theme.Colors.primaryYellow
-        label.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(label)
-
-        NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: view.centerYAnchor)
-        ])
-        return view
+        let imageView = UIImageView(image: UIImage(named: "ic_forum"))
+        imageView.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.15)
+        imageView.layer.cornerRadius = Theme.Dimensions.cornerRadius
+        imageView.layer.masksToBounds = true
+        imageView.contentMode = .scaleAspectFill
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
     }
 
     // MARK: - 热帖排行卡片
@@ -135,6 +125,10 @@ class ForumViewController: UIViewController {
         for (index, post) in hotPosts.enumerated() {
             let row = createHotPostRow(rank: index + 1, post: post)
             card.addSubview(row)
+
+            row.tag = index
+            row.isUserInteractionEnabled = true
+            row.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(hotPostTapped(_:))))
 
             NSLayoutConstraint.activate([
                 row.topAnchor.constraint(equalTo: previousView.bottomAnchor, constant: 12),
@@ -319,6 +313,14 @@ class ForumViewController: UIViewController {
         row.addGestureRecognizer(tap)
 
         return row
+    }
+
+    /// 热帖点击 → PostDetailViewController
+    @objc private func hotPostTapped(_ gesture: UITapGestureRecognizer) {
+        guard let index = gesture.view?.tag, hotPosts.indices.contains(index) else { return }
+        let vc = PostDetailViewController()
+        vc.post = hotPosts[index]
+        pushAppViewController(vc, animated: true)
     }
 
     /// 游戏频道点击 → GameForumViewController
