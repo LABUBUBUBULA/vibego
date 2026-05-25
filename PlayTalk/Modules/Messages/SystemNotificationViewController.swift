@@ -7,10 +7,10 @@ class SystemNotificationViewController: UIViewController {
     // MARK: - Mock 数据
 
     private let notifications: [(icon: String, title: String, content: String, time: String)] = [
-        ("bell.badge.fill", "Welcome to PlayTalk!", "Thank you for joining our community. Start exploring voice rooms and make new friends!", "2h ago"),
+        ("bell.badge.fill", "Welcome to PlayMeet!", "Thank you for joining our community. Start exploring voice rooms and make new friends!", "2h ago"),
         ("gift.fill", "New Feature", "Gift system is now live! Send gifts to your favorite hosts and show your support.", "5h ago"),
         ("lock.shield.fill", "Security Alert", "Your account was logged in from a new device. If this wasn't you, please change your password.", "1d ago"),
-        ("doc.text.fill", "Community Guidelines", "Please review our updated community guidelines to keep PlayTalk safe and fun.", "2d ago"),
+        ("doc.text.fill", "Community Guidelines", "Please review our updated community guidelines to keep PlayMeet safe and fun.", "2d ago"),
         ("wrench.and.screwdriver.fill", "Maintenance Notice", "Server maintenance scheduled for tomorrow 3:00–5:00 AM UTC. Some features may be temporarily unavailable.", "3d ago"),
         ("star.fill", "Level Up!", "Congratulations! You've reached Level 2. Keep chatting and gaming to unlock more rewards.", "4d ago"),
         ("megaphone.fill", "Weekend Event", "Join our weekend voice room contest! Top hosts win exclusive badges and coins.", "5d ago"),

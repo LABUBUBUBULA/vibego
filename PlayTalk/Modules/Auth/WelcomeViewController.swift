@@ -24,7 +24,7 @@ class WelcomeViewController: UIViewController {
     /// App名称标题
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "PlayTalk"
+        label.text = "PlayMeet"
         label.font = Theme.Fonts.bold(32)
         label.textColor = Theme.Colors.primaryYellow
         label.textAlignment = .center

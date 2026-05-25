@@ -280,7 +280,7 @@ class SelectInterestsViewController: UIViewController {
             interests: interests
         )
 
-        showToast("Welcome to PlayTalk!")
+        showToast("Welcome to PlayMeet!")
 
         // 延迟跳转主页
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in

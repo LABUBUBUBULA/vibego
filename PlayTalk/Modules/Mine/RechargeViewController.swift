@@ -1,4 +1,5 @@
 import UIKit
+import StoreKit
 
 /// 充值页面 - 对应 Android GameMic 的 RechargeActivity
 /// 展示金币套餐列表，选择后模拟购买（Apple IAP 后续接入）
@@ -9,11 +10,11 @@ class RechargeViewController: UIViewController {
 
     /// 充值套餐（对应 Android 的 5 个金币内购套餐）
     private let packages: [(coins: Int, price: String, productId: String)] = [
-        (100, "$0.99", "com.playtalk.coins100"),
-        (500, "$4.99", "com.playtalk.coins500"),
-        (1000, "$9.99", "com.playtalk.coins1000"),
-        (5000, "$49.99", "com.playtalk.coins5000"),
-        (10000, "$99.99", "com.playtalk.coins10000"),
+        (100, "$0.99", "com.playtalklive.coins100"),
+        (500, "$4.99", "com.playtalklive.coins500"),
+        (1000, "$9.99", "com.playtalklive.coins1000"),
+        (5000, "$49.99", "com.playtalklive.coins5000"),
+        (10000, "$99.99", "com.playtalklive.coins10000"),
     ]
 
     /// 当前选中套餐索引
@@ -113,22 +114,64 @@ class RechargeViewController: UIViewController {
         balanceLabel.text = "💰 \(MockDataManager.shared.coinBalance)"
     }
 
-    /// 购买按钮点击（Mock：直接加金币。正式版接入 Apple StoreKit）
+    /// 购买按钮点击 → StoreKit 2 发起真实内购
     @objc private func buyTapped() {
         let package = packages[selectedIndex]
-        // Mock: 直接加金币
-        MockDataManager.shared.coinBalance += package.coins
-        updateBalance()
+        buyButton.isEnabled = false
+        buyButton.setTitle("Processing...", for: .normal)
 
+        Task {
+            do {
+                let products = try await Product.products(for: [package.productId])
+                guard let product = products.first else {
+                    await showPurchaseResult(success: false, message: "Product not found", coins: 0)
+                    return
+                }
+
+                let result = try await product.purchase()
+                switch result {
+                case .success(let verification):
+                    switch verification {
+                    case .verified(let transaction):
+                        await transaction.finish()
+                        // 购买成功，加金币
+                        await MainActor.run {
+                            MockDataManager.shared.coinBalance += package.coins
+                            updateBalance()
+                        }
+                        await showPurchaseResult(success: true, message: "You received \(package.coins) coins!", coins: package.coins)
+                    case .unverified(_, let error):
+                        await showPurchaseResult(success: false, message: error.localizedDescription, coins: 0)
+                    }
+                case .pending:
+                    await showPurchaseResult(success: false, message: "Purchase pending approval", coins: 0)
+                case .userCancelled:
+                    await resetBuyButton()
+                @unknown default:
+                    await resetBuyButton()
+                }
+            } catch {
+                await showPurchaseResult(success: false, message: error.localizedDescription, coins: 0)
+            }
+        }
+    }
+
+    @MainActor
+    private func showPurchaseResult(success: Bool, message: String, coins: Int) {
+        resetBuyButton()
         let alert = UIAlertController(
-            title: "Purchase Successful",
-            message: "You received \(package.coins) coins!",
+            title: success ? "Purchase Successful" : "Purchase Failed",
+            message: message,
             preferredStyle: .alert
         )
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
+    }
 
-        collectionView.reloadData()
+    @MainActor
+    private func resetBuyButton() {
+        buyButton.isEnabled = true
+        buyButton.setTitle("Purchase", for: .normal)
     }
 }
 

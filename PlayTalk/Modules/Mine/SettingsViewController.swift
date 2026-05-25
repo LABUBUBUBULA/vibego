@@ -6,7 +6,7 @@ class SettingsViewController: UIViewController {
         ("Support", [
             "Terms of Service",
             "Privacy Policy",
-            "About PlayTalk"
+            "About PlayMeet"
         ]),
         ("Account", [
             "Delete Account"
@@ -64,11 +64,11 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let title = sections[indexPath.section].items[indexPath.row]
-        let cell = UITableViewCell(style: title == "About PlayTalk" ? .value1 : .default, reuseIdentifier: nil)
+        let cell = UITableViewCell(style: title == "About PlayMeet" ? .value1 : .default, reuseIdentifier: nil)
         cell.textLabel?.text = title
         cell.textLabel?.textColor = title == "Delete Account" ? .systemRed : Theme.Colors.textPrimary
         cell.textLabel?.font = Theme.Fonts.regular(15)
-        cell.detailTextLabel?.text = title == "About PlayTalk" ? appVersionText : nil
+        cell.detailTextLabel?.text = title == "About PlayMeet" ? appVersionText : nil
         cell.detailTextLabel?.textColor = Theme.Colors.textSecondary
         cell.detailTextLabel?.font = Theme.Fonts.regular(15)
         cell.backgroundColor = Theme.Colors.cardBackground
@@ -85,7 +85,7 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
             pushAppViewController(LegalTextViewController(type: .terms), animated: true)
         case "Privacy Policy":
             pushAppViewController(LegalTextViewController(type: .privacy), animated: true)
-        case "About PlayTalk":
+        case "About PlayMeet":
             pushAppViewController(LegalTextViewController(type: .about), animated: true)
         case "Delete Account":
             let alert = UIAlertController(
@@ -95,7 +95,7 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
             )
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
             alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { _ in
-                UserManager.shared.logout()
+                UserManager.shared.deleteCurrentAccount()
                 guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                       let window = windowScene.windows.first else { return }
                 let nav = UINavigationController(rootViewController: WelcomeViewController())

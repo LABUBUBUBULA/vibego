@@ -18,6 +18,7 @@ final class UserManager {
         static let currentUserData = "currentUserData"
         static let registeredEmails = "registeredEmails"
         static let registeredProfiles = "registeredProfiles"
+        static let deletedEmails = "deletedEmails"
     }
 
     // MARK: - 登录状态
@@ -35,11 +36,12 @@ final class UserManager {
 
     private var registeredEmails: [String: String] = [:] // email -> password
     private var registeredProfiles: [String: User] = [:] // email -> profile
+    private var deletedEmails: Set<String> = []
 
     /// 预设登录账号：用于展示完整 Mock 用户资料、头像、粉丝、聊天等
     private let presetAccounts: [String: (password: String, userIndex: Int)] = [
         "gamemic@gmail.com": ("123456789", 0),
-        "playtalk@gmail.com": ("123456789", 0)
+        "playmeet@gmail.com": ("123456789", 0)
     ]
 
     // MARK: - 快速注册（对应 Android UserManager.quickRegister）
@@ -78,7 +80,7 @@ final class UserManager {
     /// - Returns: 注册成功返回用户ID，失败返回nil
     func registerWithEmail(_ email: String, _ password: String) -> Int? {
         let normalizedEmail = email.lowercased()
-        if registeredEmails[normalizedEmail] != nil {
+        if deletedEmails.contains(normalizedEmail) || registeredEmails[normalizedEmail] != nil {
             return nil
         }
 
@@ -96,7 +98,7 @@ final class UserManager {
     /// 检查邮箱是否已注册
     func isEmailRegistered(_ email: String) -> Bool {
         let normalizedEmail = email.lowercased()
-        return registeredEmails[normalizedEmail] != nil || presetAccounts[normalizedEmail] != nil
+        return !deletedEmails.contains(normalizedEmail) && (registeredEmails[normalizedEmail] != nil || presetAccounts[normalizedEmail] != nil)
     }
 
     // MARK: - 邮箱登录（对应 Android UserManager.loginWithEmail）
@@ -108,6 +110,8 @@ final class UserManager {
     /// - Returns: 登录成功返回true
     func loginWithEmail(_ email: String, _ password: String) -> Bool {
         let normalizedEmail = email.lowercased()
+        guard !deletedEmails.contains(normalizedEmail) else { return false }
+
         if let preset = presetAccounts[normalizedEmail] {
             guard preset.password == password else { return false }
             currentUser = MockDataManager.shared.users[preset.userIndex]
@@ -145,7 +149,7 @@ final class UserManager {
     /// - Returns: 重置成功返回true
     func resetPassword(_ email: String, _ newPassword: String) -> Bool {
         let normalizedEmail = email.lowercased()
-        guard registeredEmails[normalizedEmail] != nil else {
+        guard !deletedEmails.contains(normalizedEmail), registeredEmails[normalizedEmail] != nil else {
             return false
         }
         registeredEmails[normalizedEmail] = newPassword
@@ -195,6 +199,21 @@ final class UserManager {
         UserDefaults.standard.removeObject(forKey: Keys.currentUserData)
     }
 
+    /// 删除当前账号，删除后邮箱不能重新登录或注册
+    func deleteCurrentAccount() {
+        if let email = currentUserEmail?.lowercased() {
+            deletedEmails.insert(email)
+            registeredEmails.removeValue(forKey: email)
+            registeredProfiles.removeValue(forKey: email)
+            saveRegisteredData()
+        } else {
+            deletedEmails.insert("playmeet@gmail.com")
+            deletedEmails.insert("gamemic@gmail.com")
+            saveRegisteredData()
+        }
+        logout()
+    }
+
     // MARK: - 本地状态持久化
 
     /// 保存登录状态到 UserDefaults
@@ -216,6 +235,9 @@ final class UserManager {
         if let profilesData = try? JSONEncoder().encode(registeredProfiles) {
             UserDefaults.standard.set(profilesData, forKey: Keys.registeredProfiles)
         }
+        if let deletedData = try? JSONEncoder().encode(Array(deletedEmails)) {
+            UserDefaults.standard.set(deletedData, forKey: Keys.deletedEmails)
+        }
     }
 
     private func loadRegisteredData() {
@@ -226,6 +248,10 @@ final class UserManager {
         if let profilesData = UserDefaults.standard.data(forKey: Keys.registeredProfiles),
            let profiles = try? JSONDecoder().decode([String: User].self, from: profilesData) {
             registeredProfiles = profiles
+        }
+        if let deletedData = UserDefaults.standard.data(forKey: Keys.deletedEmails),
+           let emails = try? JSONDecoder().decode([String].self, from: deletedData) {
+            deletedEmails = Set(emails.map { $0.lowercased() })
         }
     }
 
