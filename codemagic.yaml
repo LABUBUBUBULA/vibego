@@ -9,6 +9,11 @@ workflows:
       xcode: latest
       groups:
         - github_credentials
+      ios_signing:
+        provisioning_profiles:
+          - playmeet_appstore_push
+        certificates:
+          - playmeet_distribution
     scripts:
       - name: Install XcodeGen
         script: |
