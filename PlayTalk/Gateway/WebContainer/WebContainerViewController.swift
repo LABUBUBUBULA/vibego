@@ -174,6 +174,7 @@ class WebContainerViewController: UIViewController {
         webView.uiDelegate = self
         webView.backgroundColor = .clear
         webView.isOpaque = false
+        webView.allowsBackForwardNavigationGestures = true
         webView.scrollView.bounces = false
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.translatesAutoresizingMaskIntoConstraints = false
@@ -515,6 +516,11 @@ extension WebContainerViewController: WKNavigationDelegate {
 
 extension WebContainerViewController: WKUIDelegate {
 
+    @available(iOS 15.0, *)
+    func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
+        decisionHandler(.grant)
+    }
+
     /// 处理 target="_blank" 链接 → 系统浏览器打开
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if navigationAction.targetFrame == nil || !(navigationAction.targetFrame?.isMainFrame ?? false) {
@@ -585,12 +591,42 @@ extension WebContainerViewController: WebScriptHandlerDelegate {
     }
 
     func handleRequestPermission() {
-        // 返回权限状态
+        requestCameraPermission { [weak self] in
+            self?.requestMicrophonePermission {
+                self?.sendPermissionResult()
+            }
+        }
+    }
+
+    private func requestCameraPermission(completion: @escaping () -> Void) {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { _ in
+                DispatchQueue.main.async { completion() }
+            }
+        default:
+            completion()
+        }
+    }
+
+    private func requestMicrophonePermission(completion: @escaping () -> Void) {
+        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .audio) { _ in
+                DispatchQueue.main.async { completion() }
+            }
+        default:
+            completion()
+        }
+    }
+
+    private func sendPermissionResult() {
         let camera = AVCaptureDevice.authorizationStatus(for: .video) == .authorized
+        let microphone = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
         let photo = true // 照片权限在 iOS 不需要预先检查
         let js = """
         window.dispatchEvent(new CustomEvent('permissionResult', {
-            detail: { camera: \(camera), picture: \(photo) }
+            detail: { camera: \(camera), microphone: \(microphone), audio: \(microphone), picture: \(photo) }
         }));
         """
         webView.evaluateJavaScript(js, completionHandler: nil)

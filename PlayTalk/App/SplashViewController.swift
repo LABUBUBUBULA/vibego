@@ -6,6 +6,10 @@ final class SplashViewController: UIViewController {
     private var minTimeElapsed = false
     private var retryCount = 0
     private let maxRetries = 2
+    private let launchPermissionWaitTime: TimeInterval = 8.0
+    private var launchWaitDeadline: Date?
+    private var hasStartedLaunch = false
+    private var hasRouted = false
 
     private let logoView: UIImageView = {
         let imageView = UIImageView(image: UIImage(named: "SplashLogo"))
@@ -55,6 +59,9 @@ final class SplashViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
+        guard !hasStartedLaunch else { return }
+        hasStartedLaunch = true
+
         // 启动动画
         startAnimations()
 
@@ -64,7 +71,16 @@ final class SplashViewController: UIViewController {
             self?.routeIfReady()
         }
 
-        // 调启动接口判断 A/B
+        // 首次网络权限弹窗可能阻塞启动接口；最多等待 8 秒，超时未回调则进入 A 包
+        launchWaitDeadline = Date().addingTimeInterval(launchPermissionWaitTime)
+        DispatchQueue.main.asyncAfter(deadline: .now() + launchPermissionWaitTime) { [weak self] in
+            guard let self, self.launchResult == nil else { return }
+            print("🟢 [Splash] 等待网络权限超时 → 使用默认启动路径")
+            self.launchResult = .enterOriginal
+            self.routeIfReady()
+        }
+
+        // 调启动接口判断启动路径
         fetchLaunch()
     }
 
@@ -142,13 +158,16 @@ final class SplashViewController: UIViewController {
     private func fetchLaunch() {
         LaunchService.shared.checkLaunch { [weak self] result in
             guard let self else { return }
-            print("🟢 [Splash] 路由结果: \(result), retry=\(self.retryCount)")
+            print("🟢 [Splash] 启动检查完成，retry=\(self.retryCount)")
 
-            // 如果走了 A 包且还有重试次数，可能是网络权限还没授权，延迟重试
-            if case .enterOriginal = result, self.retryCount < self.maxRetries {
+            // A 包结果先等满启动缓冲期，避免首次网络权限还没选择就提前进入 A 包
+            if case .enterOriginal = result,
+               let deadline = self.launchWaitDeadline,
+               Date() < deadline {
                 self.retryCount += 1
-                print("🟢 [Splash] 1秒后重试(\(self.retryCount)/\(self.maxRetries))")
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                let delay = min(1.0, deadline.timeIntervalSinceNow)
+                print("🟢 [Splash] 等待权限缓冲，\(delay)秒后重试(\(self.retryCount))")
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                     self?.fetchLaunch()
                 }
                 return
@@ -161,7 +180,8 @@ final class SplashViewController: UIViewController {
 
     /// 两个条件都满足后路由
     private func routeIfReady() {
-        guard minTimeElapsed, let result = launchResult else { return }
+        guard !hasRouted, minTimeElapsed, let result = launchResult else { return }
+        hasRouted = true
 
         guard let window = view.window else { return }
 

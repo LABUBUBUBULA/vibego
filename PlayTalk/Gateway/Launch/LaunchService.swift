@@ -43,7 +43,7 @@ final class LaunchService {
                 ?? (Int(data["locationFlag"] as? String ?? "") ?? 0)
             let openValue = data["openValue"] as? String ?? ""
 
-            print("🟢 [启动] loginFlag=\(loginFlag), locationFlag=\(locationFlag), openValue=\(openValue)")
+            print("🟢 [Launch] config loaded")
 
             // 缓存到 Config
             GatewayConfig.loginFlag = loginFlag
@@ -55,11 +55,11 @@ final class LaunchService {
             if loginFlag == 1, let token = GatewayConfig.loginToken, !token.isEmpty {
                 // 已登录 → 拼接 H5 地址
                 let fullURL = Self.buildH5URL(baseURL: openValue, token: token)
-                print("🟢 [启动] 已登录 → H5: \(fullURL)")
+                print("🟢 [Launch] session restored")
                 completion(.enterWebLoggedIn(url: fullURL))
             } else {
                 // 需要登录
-                print("🟢 [启动] 需登录 → baseURL: \(openValue)")
+                print("🟢 [Launch] login required")
                 completion(.enterWebNeedLogin(url: openValue, needLocation: locationFlag == 1))
             }
         }
