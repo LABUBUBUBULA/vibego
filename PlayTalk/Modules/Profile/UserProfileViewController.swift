@@ -344,6 +344,11 @@ class UserProfileViewController: UIViewController {
     }
 
     private func profileGiftWall(for user: User) -> [(imageName: String, count: Int)] {
+        if user.id == UserManager.shared.currentUser?.id,
+           !UserManager.shared.isPresetAccountUserId(user.id) {
+            return []
+        }
+
         let offset = abs(user.id) % baseGiftWallImageNames.count
         let visibleCount = 6 + abs(user.id) % 7
         return (0..<visibleCount).map { index in

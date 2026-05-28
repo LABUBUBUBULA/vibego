@@ -8,20 +8,12 @@ final class GatewayAPI: NSObject, URLSessionDelegate {
     static let shared = GatewayAPI()
     private override init() { super.init() }
 
-    /// 自定义 URLSession，跳过 SSL 证书验证（解决 VPN 代理下 SSL 握手失败）
+    /// 自定义 URLSession
     private lazy var session: URLSession = {
         let config = URLSessionConfiguration.default
-        return URLSession(configuration: config, delegate: self, delegateQueue: nil)
+        return URLSession(configuration: config, delegate: nil, delegateQueue: nil)
     }()
 
-    func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge,
-                    completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-        if let trust = challenge.protectionSpace.serverTrust {
-            completionHandler(.useCredential, URLCredential(trust: trust))
-        } else {
-            completionHandler(.performDefaultHandling, nil)
-        }
-    }
 
     // MARK: - 通用请求
 

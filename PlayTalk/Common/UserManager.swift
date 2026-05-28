@@ -38,6 +38,8 @@ final class UserManager {
     private var registeredProfiles: [String: User] = [:] // email -> profile
     private var deletedEmails: Set<String> = []
 
+    private let presetAccountUserIds: Set<Int> = [54782]
+
     /// 预设登录账号：用于展示完整 Mock 用户资料、头像、粉丝、聊天等
     private let presetAccounts: [String: (password: String, userIndex: Int)] = [
         "gamemic@gmail.com": ("123456789", 0),
@@ -46,15 +48,16 @@ final class UserManager {
 
     // MARK: - 快速注册（对应 Android UserManager.quickRegister）
 
+    private let defaultAvatarImage = "default_avatar"
+
     /// 一键快速注册，生成随机用户，直接登录
     /// - Returns: 注册成功的用户
     @discardableResult
     func quickRegister() -> User {
-        let mockUser = MockDataManager.shared.users[0]
         let newUser = User(
             id: Int.random(in: 10000...99999),
             name: "User\(Int.random(in: 1000...9999))",
-            avatarImage: mockUser.avatarImage,
+            avatarImage: defaultAvatarImage,
             avatarUri: nil,
             bio: "",
             gender: "male",
@@ -68,6 +71,7 @@ final class UserManager {
         currentUserEmail = nil
         isLoggedIn = true
         saveLocalState()
+        MockDataManager.shared.resetSessionDataForAccountSwitch()
         return newUser
     }
 
@@ -92,6 +96,7 @@ final class UserManager {
         isLoggedIn = true
         saveRegisteredData()
         saveLocalState()
+        MockDataManager.shared.resetSessionDataForAccountSwitch()
         return newUser.id
     }
 
@@ -118,6 +123,7 @@ final class UserManager {
             currentUserEmail = nil
             isLoggedIn = true
             saveLocalState()
+            MockDataManager.shared.resetSessionDataForAccountSwitch()
             return true
         }
 
@@ -137,6 +143,7 @@ final class UserManager {
         currentUserEmail = normalizedEmail
         isLoggedIn = true
         saveLocalState()
+        MockDataManager.shared.resetSessionDataForAccountSwitch()
         return true
     }
 
@@ -185,6 +192,15 @@ final class UserManager {
             saveRegisteredData()
         }
         saveLocalState()
+    }
+
+    func isPresetAccountUserId(_ userId: Int) -> Bool {
+        presetAccountUserIds.contains(userId)
+    }
+
+    var currentAccountKey: String {
+        guard let user = currentUser else { return "guest" }
+        return isPresetAccountUserId(user.id) ? "preset_\(user.id)" : "user_\(user.id)"
     }
 
     // MARK: - 退出登录
@@ -277,12 +293,11 @@ final class UserManager {
     }
 
     private func makeRegisteredUser(email: String) -> User {
-        let mockUser = MockDataManager.shared.users[0]
         let namePart = email.split(separator: "@").first.map(String.init) ?? "User"
         return User(
             id: Int.random(in: 10000...99999),
             name: namePart,
-            avatarImage: mockUser.avatarImage,
+            avatarImage: defaultAvatarImage,
             avatarUri: nil,
             bio: "",
             gender: "male",

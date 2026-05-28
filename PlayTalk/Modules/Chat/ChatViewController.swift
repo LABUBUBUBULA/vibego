@@ -40,7 +40,7 @@ class ChatViewController: UIViewController {
         let time: String
     }
 
-    private var storageKey: String { "playmeet_chat_\(chatUser?.userId ?? 0)" }
+    private var storageKey: String { "playmeet_chat_\(UserManager.shared.currentAccountKey)_\(chatUser?.userId ?? 0)" }
     private var peerAvatarImage: String { chatUser?.avatarImage ?? "avatar_2" }
     private var myAvatarImage: String { UserManager.shared.currentUser?.displayAvatar ?? MockDataManager.shared.currentUser.avatarImage }
 

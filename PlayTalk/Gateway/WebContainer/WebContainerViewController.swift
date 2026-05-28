@@ -106,6 +106,7 @@ class WebContainerViewController: UIViewController {
     // MARK: - H5 加载计时
 
     private var pageLoadStartTime: Date?
+    private var edgeBackGesture: UIScreenEdgePanGestureRecognizer?
 
     // MARK: - 生命周期
 
@@ -123,6 +124,7 @@ class WebContainerViewController: UIViewController {
         setupWebView()
         setupLoadingOverlay()
         setupScreenshotPrevention()
+        setupEdgeBackGesture()
 
         if !loadURL.isEmpty {
             startLoadH5()
@@ -143,6 +145,18 @@ class WebContainerViewController: UIViewController {
         controller?.removeScriptMessageHandler(forName: "requestPermission")
         controller?.removeScriptMessageHandler(forName: "Pay")
         NotificationCenter.default.removeObserver(self)
+    }
+
+    private func setupEdgeBackGesture() {
+        let gesture = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(handleEdgeBackGesture(_:)))
+        gesture.edges = .left
+        view.addGestureRecognizer(gesture)
+        edgeBackGesture = gesture
+    }
+
+    @objc private func handleEdgeBackGesture(_ gesture: UIScreenEdgePanGestureRecognizer) {
+        guard gesture.state == .ended else { return }
+        _ = handleBackNavigation()
     }
 
     // MARK: - WebView 配置
@@ -174,7 +188,7 @@ class WebContainerViewController: UIViewController {
         webView.uiDelegate = self
         webView.backgroundColor = .clear
         webView.isOpaque = false
-        webView.allowsBackForwardNavigationGestures = true
+        webView.allowsBackForwardNavigationGestures = false
         webView.scrollView.bounces = false
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.translatesAutoresizingMaskIntoConstraints = false

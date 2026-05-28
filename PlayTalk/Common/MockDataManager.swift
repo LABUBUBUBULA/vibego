@@ -64,7 +64,17 @@ final class MockDataManager {
     /// 判断当前用户是否为预设用户（非新注册）
     var isPresetUser: Bool {
         guard let current = UserManager.shared.currentUser else { return false }
-        return users.contains { $0.id == current.id }
+        return UserManager.shared.isPresetAccountUserId(current.id)
+    }
+
+    private var currentAccountKey: String {
+        UserManager.shared.currentAccountKey
+    }
+
+    func resetSessionDataForAccountSwitch() {
+        messages = loadMessages()
+        browseHistoryRoomIds = loadBrowseHistoryRoomIds()
+        coinBalance = isPresetUser ? 12580 : 0
     }
 
     // MARK: - 语音房数据（对应 Android VoiceRoomRepository）
@@ -122,7 +132,7 @@ final class MockDataManager {
                 gameTag: tags[i],
                 description: descriptions[i],
                 roomName: roomTitles[i],
-                isCollected: i % 5 == 0,
+                isCollected: false,
                 hostName: user.name,
                 hostAvatarImage: user.avatarImage,
                 hostCountry: "",
@@ -180,7 +190,34 @@ final class MockDataManager {
         }
     }
 
+    private func collectedRoomsStorageKey() -> String {
+        "MockDataManager.collectedRooms.\(currentAccountKey)"
+    }
+
+    private func loadCollectedRoomIds() -> Set<String> {
+        guard let ids = UserDefaults.standard.array(forKey: collectedRoomsStorageKey()) as? [String] else {
+            return isPresetUser ? Set(voiceRooms.enumerated().compactMap { $0.offset % 5 == 0 ? $0.element.roomId : nil }) : []
+        }
+        return Set(ids)
+    }
+
+    private func saveCollectedRoomIds(_ ids: Set<String>) {
+        UserDefaults.standard.set(Array(ids), forKey: collectedRoomsStorageKey())
+    }
+
+    func isRoomCollected(roomId: String) -> Bool {
+        loadCollectedRoomIds().contains(roomId)
+    }
+
     func setRoomCollected(roomId: String, isCollected: Bool) {
+        var ids = loadCollectedRoomIds()
+        if isCollected {
+            ids.insert(roomId)
+        } else {
+            ids.remove(roomId)
+        }
+        saveCollectedRoomIds(ids)
+
         if let index = userCreatedRooms.firstIndex(where: { $0.roomId == roomId }) {
             userCreatedRooms[index].isCollected = isCollected
         }
@@ -191,11 +228,24 @@ final class MockDataManager {
 
     /// 我的收藏 - 对应 Android RoomCollectionManager.getCollections
     func getCollectedRooms() -> [VoiceRoom] {
-        (userCreatedRooms + voiceRooms).filter { $0.isCollected }
+        let ids = loadCollectedRoomIds()
+        return (userCreatedRooms + voiceRooms).filter { ids.contains($0.roomId) }
     }
 
     /// 浏览记录 - 对应 Android BrowseHistoryManager，最新浏览排前，最多50条
-    private var browseHistoryRoomIds: [String] = []
+    private func browseHistoryStorageKey() -> String {
+        "MockDataManager.browseHistoryRoomIds.\(currentAccountKey)"
+    }
+
+    private lazy var browseHistoryRoomIds: [String] = loadBrowseHistoryRoomIds()
+
+    private func loadBrowseHistoryRoomIds() -> [String] {
+        UserDefaults.standard.array(forKey: browseHistoryStorageKey()) as? [String] ?? []
+    }
+
+    private func saveBrowseHistoryRoomIds() {
+        UserDefaults.standard.set(browseHistoryRoomIds, forKey: browseHistoryStorageKey())
+    }
 
     func addBrowseHistory(_ room: VoiceRoom) {
         browseHistoryRoomIds.removeAll { $0 == room.roomId }
@@ -203,6 +253,7 @@ final class MockDataManager {
         if browseHistoryRoomIds.count > 50 {
             browseHistoryRoomIds = Array(browseHistoryRoomIds.prefix(50))
         }
+        saveBrowseHistoryRoomIds()
     }
 
     func getBrowseHistoryRooms() -> [VoiceRoom] {
@@ -356,17 +407,20 @@ final class MockDataManager {
 
     // MARK: - 消息数据
 
-    private let messagesStorageKey = "MockDataManager.messages"
+    private let messagesStorageKeyPrefix = "MockDataManager.messages"
+
+    private func messagesStorageKey() -> String {
+        "\(messagesStorageKeyPrefix).\(currentAccountKey)"
+    }
 
     /// 私聊消息列表（带 UserDefaults 持久化，对应 ChatViewController 同款方案）
-    lazy var messages: [Message] = {
-        // 先尝试读取持久化数据
-        if let data = UserDefaults.standard.data(forKey: messagesStorageKey),
-           let saved = try? JSONDecoder().decode([Message].self, from: data),
-           !saved.isEmpty {
+    lazy var messages: [Message] = loadMessages()
+
+    private func loadMessages() -> [Message] {
+        if let data = UserDefaults.standard.data(forKey: messagesStorageKey()),
+           let saved = try? JSONDecoder().decode([Message].self, from: data) {
             return saved
         }
-        // 新注册用户不预填消息
         guard isPresetUser else { return [] }
         // 无持久化数据 → 使用预设值
         let lastMessages = [
@@ -397,14 +451,14 @@ final class MockDataManager {
         }
         // 首次写入持久化
         if let data = try? JSONEncoder().encode(defaults) {
-            UserDefaults.standard.set(data, forKey: messagesStorageKey)
+            UserDefaults.standard.set(data, forKey: messagesStorageKey())
         }
         return defaults
-    }()
+    }
 
     private func saveMessages() {
         guard let data = try? JSONEncoder().encode(messages) else { return }
-        UserDefaults.standard.set(data, forKey: messagesStorageKey)
+        UserDefaults.standard.set(data, forKey: messagesStorageKey())
     }
 
     func clearMessageSummary(userId: Int) {
@@ -457,7 +511,7 @@ final class MockDataManager {
     }
 
     func getFollowingUsers() -> [User] {
-        guard isPresetUser else { return users.filter { $0.isFollowing && $0.id != (UserManager.shared.currentUser?.id ?? 0) } }
+        guard isPresetUser else { return [] }
         return users.filter { $0.isFollowing && $0.id != currentUser.id }
     }
 

@@ -9,6 +9,7 @@ class SelectInterestsViewController: UIViewController {
 
     var nickname: String = ""
     var gender: String = "male"
+    var avatarUri: String?
 
     // MARK: - 状态
 
@@ -274,7 +275,7 @@ class SelectInterestsViewController: UIViewController {
         UserManager.shared.updateUserProfile(
             nickname: nickname,
             gender: gender,
-            avatarUri: nil,
+            avatarUri: avatarUri,
             country: "",
             countryFlag: "",
             interests: interests

@@ -668,7 +668,7 @@ class VoiceRoomViewController: UIViewController {
         } else {
             roomCoverView.image = UIImage(named: room.coverImage)
         }
-        isFavorited = room.isCollected
+        isFavorited = MockDataManager.shared.isRoomCollected(roomId: room.roomId)
         let favImageName = isFavorited ? "ic_room_favorite" : "ic_room_unfavorite"
         favoriteButton.setImage(UIImage(named: favImageName), for: .normal)
 
