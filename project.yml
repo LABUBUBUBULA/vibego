@@ -29,6 +29,7 @@ targets:
         buildPhase: resources
         excludes:
           - Info.plist
+          - VibeGo.entitlements
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.vibegolive.app
