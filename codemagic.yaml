@@ -47,12 +47,15 @@ workflows:
       - name: Build IPA
         script: |
           cd $CM_BUILD_DIR
+          set -o pipefail
           xcode-project build-ipa \
             --project "VibeGo.xcodeproj" \
-            --scheme "VibeGo"
+            --scheme "VibeGo" 2>&1 | tee build_ipa.log
 
     artifacts:
       - build/ios/ipa/*.ipa
+      - build_ipa.log
+      - /tmp/xcodebuild_logs/*.log
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
 
