@@ -51,6 +51,13 @@ workflows:
           xcode-project build-ipa \
             --project "VibeGo.xcodeproj" \
             --scheme "VibeGo" 2>&1 | tee build_ipa.log
+          build_status=${PIPESTATUS[0]}
+          if [ "$build_status" -ne 0 ]; then
+            echo "xcode-project build-ipa failed with status $build_status"
+            echo "Dumping xcodebuild logs from /tmp/xcodebuild_logs"
+            find /tmp/xcodebuild_logs -type f -maxdepth 1 -print -exec tail -n 300 {} \; || true
+          fi
+          exit "$build_status"
 
     artifacts:
       - build/ios/ipa/*.ipa
