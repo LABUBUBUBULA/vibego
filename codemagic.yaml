@@ -11,18 +11,33 @@ workflows:
         - github_credentials
       ios_signing:
         provisioning_profiles:
-          - playmeet_appstore_push
+          - vibego_appstore
         certificates:
-          - playmeet_distribution
+          - vibego_distribution
     scripts:
       - name: Install XcodeGen
         script: |
-          brew install xcodegen
+          brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
 
       - name: Generate Xcode project
         script: |
           cd $CM_BUILD_DIR
           xcodegen generate
+
+      - name: Verify obfuscation inputs
+        script: |
+          cd $CM_BUILD_DIR
+          test -f PlayTalk/Gateway/Security/ObfuscatedText.swift
+          grep -q "ObfuscatedGatewayText" PlayTalk/Gateway/Config/GatewayConfig.swift
+          grep -q "ObfuscatedBridgeText" PlayTalk/Gateway/WebContainer/WebContainerViewController.swift
+
+      - name: Set app version
+        script: |
+          cd $CM_BUILD_DIR
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.0" PlayTalk/Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 1" PlayTalk/Resources/Info.plist
+          echo "Using CFBundleShortVersionString=1.0.0"
+          echo "Using CFBundleVersion=1"
 
       - name: Set up code signing
         script: |
@@ -33,8 +48,8 @@ workflows:
         script: |
           cd $CM_BUILD_DIR
           xcode-project build-ipa \
-            --project "PlayMeet.xcodeproj" \
-            --scheme "PlayMeet"
+            --project "VibeGo.xcodeproj" \
+            --scheme "VibeGo"
 
     artifacts:
       - build/ios/ipa/*.ipa

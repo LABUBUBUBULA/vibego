@@ -252,7 +252,7 @@ class ForgotPasswordViewController: UIViewController {
         tf.backgroundColor = Theme.Colors.cardBackground
         tf.layer.cornerRadius = 16
         tf.layer.borderWidth = 1
-        tf.layer.borderColor = UIColor(hex: "#343545").cgColor
+        tf.layer.borderColor = Theme.Colors.textFieldBorder.cgColor
         tf.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 24, height: 0))
         tf.leftViewMode = .always
         tf.autocapitalizationType = .none

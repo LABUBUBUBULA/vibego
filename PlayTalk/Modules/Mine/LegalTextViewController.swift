@@ -27,7 +27,7 @@ final class LegalTextViewController: UIViewController {
             case .privacy:
                 return "privacy-policy"
             case .about:
-                return "about-playmeet"
+                return "about-vibego"
             }
         }
     }

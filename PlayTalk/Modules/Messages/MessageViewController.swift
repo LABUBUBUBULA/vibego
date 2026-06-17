@@ -224,7 +224,7 @@ extension MessageViewController: UITableViewDataSource, UITableViewDelegate {
                 level: message.level,
                 backgroundImage: "bg_\(abs(message.userId) % 20 + 1)",
                 isFollowing: MockDataManager.shared.isFollowing(userId: message.userId),
-                interests: "PUBG"
+                interests: "Mobile Legends"
             )
             vc.user = MockDataManager.shared.user(withId: message.userId) ?? fallbackUser
             self.pushAppViewController(vc, animated: true)

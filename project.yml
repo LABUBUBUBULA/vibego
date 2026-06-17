@@ -1,6 +1,6 @@
-name: PlayMeet
+name: VibeGo
 options:
-  bundleIdPrefix: com.playtalklive
+  bundleIdPrefix: com.vibego
   deploymentTarget:
     iOS: "15.0"
 settings:
@@ -9,7 +9,7 @@ settings:
     TARGETED_DEVICE_FAMILY: "1"
     SUPPORTS_MACCATALYST: false
 targets:
-  PlayMeet:
+  VibeGo:
     type: application
     platform: iOS
     sources:
@@ -31,10 +31,16 @@ targets:
           - Info.plist
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.playtalklive.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.vibegolive.app
         INFOPLIST_FILE: PlayTalk/Resources/Info.plist
         GENERATE_INFOPLIST_FILE: false
-        CODE_SIGN_ENTITLEMENTS: PlayTalk/Resources/PlayMeet.entitlements
+        CODE_SIGN_ENTITLEMENTS: PlayTalk/Resources/VibeGo.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Automatic
+    entitlements:
+      path: PlayTalk/Resources/VibeGo.entitlements
+      properties:
+        aps-environment: production
+    capabilities:
+      pushNotifications: true

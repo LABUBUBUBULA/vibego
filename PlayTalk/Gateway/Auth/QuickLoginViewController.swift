@@ -3,7 +3,6 @@ import CoreLocation
 
 /// B 包快速登录页
 /// 基于 WelcomeViewController 风格，去掉邮箱登录，只保留快速登录按钮
-/// 登录接口: /opi/v1/user/portal (末尾 l)
 class QuickLoginViewController: UIViewController, CLLocationManagerDelegate {
 
     // MARK: - 外部传入
@@ -51,7 +50,7 @@ class QuickLoginViewController: UIViewController, CLLocationManagerDelegate {
 
     private let loadingIndicator: UIActivityIndicatorView = {
         let ind = UIActivityIndicatorView(style: .medium)
-        ind.color = UIColor(hex: "#4A90D9")
+        ind.color = Theme.Colors.accentCyan
         ind.hidesWhenStopped = true
         ind.translatesAutoresizingMaskIntoConstraints = false
         return ind
@@ -79,7 +78,7 @@ class QuickLoginViewController: UIViewController, CLLocationManagerDelegate {
     }
 
     private func setupUI() {
-        view.backgroundColor = UIColor(hex: "#0A0626")
+        view.backgroundColor = Theme.Colors.splashBackground
 
         // 全屏背景
         view.addSubview(bgImageView)

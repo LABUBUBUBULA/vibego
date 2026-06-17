@@ -19,17 +19,33 @@ class CategoryCell: UICollectionViewCell {
 
     // MARK: - 初始化
 
+    /// 底部选中指示条
+    private let indicator: UIView = {
+        let v = UIView()
+        v.backgroundColor = Theme.Colors.primaryPurple
+        v.layer.cornerRadius = 1.5
+        v.isHidden = true
+        v.translatesAutoresizingMaskIntoConstraints = false
+        return v
+    }()
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         contentView.addSubview(titleLabel)
-        contentView.layer.cornerRadius = 18  // 圆角胶囊形状
+        contentView.addSubview(indicator)
+        contentView.layer.cornerRadius = 8
         contentView.layer.masksToBounds = true
 
         NSLayoutConstraint.activate([
             titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 6),
             titleLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -6),
-            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20), // 对应 Android 20dp padding
-            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20)
+            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+
+            indicator.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            indicator.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            indicator.widthAnchor.constraint(equalToConstant: 24),
+            indicator.heightAnchor.constraint(equalToConstant: 3)
         ])
     }
 
@@ -46,13 +62,15 @@ class CategoryCell: UICollectionViewCell {
     func configure(title: String, isSelected: Bool) {
         titleLabel.text = title
         if isSelected {
-            // 选中状态：黄色背景 + 深色文字（对应 Android bg_tab_selected + #FFD500）
-            contentView.backgroundColor = Theme.Colors.primaryYellow
-            titleLabel.textColor = Theme.Colors.darkerBackground
+            contentView.backgroundColor = .clear
+            titleLabel.textColor = Theme.Colors.primaryPurple
+            titleLabel.font = Theme.Fonts.bold(15)
+            indicator.isHidden = false
         } else {
-            // 未选中状态：深色背景 + 灰色文字（对应 Android bg_tab_normal + #999999）
-            contentView.backgroundColor = Theme.Colors.cardBackground
+            contentView.backgroundColor = .clear
             titleLabel.textColor = Theme.Colors.textSecondary
+            titleLabel.font = Theme.Fonts.medium(14)
+            indicator.isHidden = true
         }
     }
 }

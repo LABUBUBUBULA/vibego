@@ -7,20 +7,22 @@ class RoomCell: UITableViewCell {
 
     // MARK: - UI 组件
 
-    /// 卡片容器（对应 Android CardView，16dp 圆角，深色背景）
+    /// 卡片容器
     private let containerView: UIView = {
         let v = UIView()
         v.backgroundColor = Theme.Colors.cardBackground
-        v.layer.cornerRadius = 16
+        v.layer.cornerRadius = 20
+        v.layer.borderWidth = 1
+        v.layer.borderColor = Theme.Colors.separator.cgColor
         v.translatesAutoresizingMaskIntoConstraints = false
         return v
     }()
 
-    /// 房间封面图片（84x84，12dp 圆角）
+    /// 房间封面图片（圆形）
     private let coverImageView: UIImageView = {
         let iv = UIImageView()
         iv.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.2)
-        iv.layer.cornerRadius = 12
+        iv.layer.cornerRadius = 36
         iv.layer.masksToBounds = true
         iv.contentMode = .scaleAspectFill
         iv.translatesAutoresizingMaskIntoConstraints = false
@@ -115,10 +117,10 @@ class RoomCell: UITableViewCell {
             containerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             containerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -4),
 
-            coverImageView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 8),
+            coverImageView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 14),
             coverImageView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
-            coverImageView.widthAnchor.constraint(equalToConstant: 84),
-            coverImageView.heightAnchor.constraint(equalToConstant: 84),
+            coverImageView.widthAnchor.constraint(equalToConstant: 72),
+            coverImageView.heightAnchor.constraint(equalToConstant: 72),
 
             titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 12),
             titleLabel.leadingAnchor.constraint(equalTo: coverImageView.trailingAnchor, constant: 12),
@@ -165,13 +167,13 @@ class RoomCell: UITableViewCell {
 
     private func tagColor(for tag: String) -> UIColor {
         switch tag {
-        case "PUBG":
+        case "Mobile Legends":
             return UIColor(hex: "#FFB800")
-        case "Minecraft":
+        case "Roblox":
             return UIColor(hex: "#45D26A")
-        case "Fortnite":
+        case "Brawl Stars":
             return UIColor(hex: "#7C5CFF")
-        case "TheSims":
+        case "Among Us":
             return UIColor(hex: "#20C8FF")
         default:
             return Theme.Colors.primaryYellow

@@ -23,7 +23,7 @@ class CompleteProfileViewController: UIViewController {
     /// 头像容器（对应 Android iv_avatar + iv_camera）
     private let avatarView: UIView = {
         let v = UIView()
-        v.backgroundColor = UIColor(hex: "#2A2A36")
+        v.backgroundColor = Theme.Colors.cardBackground
         v.layer.cornerRadius = 60
         v.layer.masksToBounds = true
         v.translatesAutoresizingMaskIntoConstraints = false

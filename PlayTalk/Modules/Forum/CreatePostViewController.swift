@@ -8,7 +8,7 @@ class CreatePostViewController: UIViewController {
     // MARK: - 状态
 
     /// 游戏标签（由上级页面传入）
-    var gameTag: String = "PUBG"
+    var gameTag: String = "Mobile Legends"
 
     /// 已选图片（最多4张）
     private var selectedImages: [(image: UIImage, uri: String)] = []

@@ -47,30 +47,30 @@ class MainTabBarController: UITabBarController {
     private func setupViewControllers() {
         let homeVC = HomeViewController()
         homeVC.tabBarItem = UITabBarItem(
-            title: "Home",
-            image: UIImage(systemName: "house"),
-            selectedImage: UIImage(systemName: "house.fill")
+            title: "Explore",
+            image: UIImage(systemName: "gamecontroller"),
+            selectedImage: UIImage(systemName: "gamecontroller.fill")
         )
 
         let forumVC = ForumViewController()
         forumVC.tabBarItem = UITabBarItem(
-            title: "Forum",
-            image: UIImage(systemName: "bubble.left.and.bubble.right"),
-            selectedImage: UIImage(systemName: "bubble.left.and.bubble.right.fill")
+            title: "Community",
+            image: UIImage(systemName: "flame"),
+            selectedImage: UIImage(systemName: "flame.fill")
         )
 
         let messageVC = MessageViewController()
         messageVC.tabBarItem = UITabBarItem(
-            title: "Messages",
-            image: UIImage(systemName: "message"),
-            selectedImage: UIImage(systemName: "message.fill")
+            title: "Chat",
+            image: UIImage(systemName: "bubble.left.and.text.bubble.right"),
+            selectedImage: UIImage(systemName: "bubble.left.and.text.bubble.right.fill")
         )
 
         let mineVC = MineViewController()
         mineVC.tabBarItem = UITabBarItem(
-            title: "Mine",
-            image: UIImage(systemName: "person"),
-            selectedImage: UIImage(systemName: "person.fill")
+            title: "Profile",
+            image: UIImage(systemName: "person.crop.circle"),
+            selectedImage: UIImage(systemName: "person.crop.circle.fill")
         )
 
         viewControllers = [homeVC, forumVC, messageVC, mineVC]

@@ -11,7 +11,7 @@ protocol WebScriptHandlerDelegate: AnyObject {
 }
 
 /// WKScriptMessageHandler 代理（避免循环引用）
-/// H5 通过 window.webkit.messageHandlers.xxx.postMessage() 调用
+/// H5 通过 WKScriptMessageHandler 调用
 class WebScriptHandler: NSObject, WKScriptMessageHandler {
 
     weak var delegate: WebScriptHandlerDelegate?
@@ -26,40 +26,40 @@ class WebScriptHandler: NSObject, WKScriptMessageHandler {
 
         switch message.name {
 
-        case "rechargePay", "Pay":
-            // rechargePay({batchNo, callbackJson}) 或 Pay(batchNo)
+        case ObfuscatedBridgeText.Handler.h0, ObfuscatedBridgeText.Handler.h5:
+            // 支付消息
             if let body = message.body as? [String: Any] {
-                let batchNo = body["batchNo"] as? String ?? ""
-                let callbackJson = body["callbackJson"] as? String
-                    ?? body["orderCode"] as? String ?? ""
-                print("🔌 [JSBridge] rechargePay → batchNo=\(batchNo), callbackJson=\(callbackJson)")
+                let batchNo = body[ObfuscatedBridgeText.Field.f0] as? String ?? ""
+                let callbackJson = body[ObfuscatedBridgeText.Field.f1] as? String
+                    ?? body[ObfuscatedBridgeText.Field.f2] as? String ?? ""
+                print("🔌 [JSBridge] payment message parsed")
                 delegate?.handleRechargePay(batchNo: batchNo, callbackJson: callbackJson)
             } else if let batchNo = message.body as? String {
-                print("🔌 [JSBridge] rechargePay → batchNo=\(batchNo) (string)")
+                print("🔌 [JSBridge] payment string message parsed")
                 delegate?.handleRechargePay(batchNo: batchNo, callbackJson: "")
             }
 
-        case "openBrowser":
-            // openBrowser({type, url})
+        case ObfuscatedBridgeText.Handler.h1:
+            // 外部打开消息
             if let body = message.body as? [String: Any],
-               let url = body["url"] as? String {
-                let type = body["type"] as? String ?? "system"
-                print("🔌 [JSBridge] openBrowser → type=\(type), url=\(url)")
+               let url = body[ObfuscatedBridgeText.Field.f3] as? String {
+                let type = body[ObfuscatedBridgeText.Field.f4] as? String ?? ObfuscatedBridgeText.Field.f14
+                print("🔌 [JSBridge] open message parsed")
                 delegate?.handleOpenBrowser(type: type, url: url)
             } else {
-                print("🔌 [JSBridge] openBrowser ❌ 参数解析失败: \(message.body)")
+                print("🔌 [JSBridge] open message parse failed: \(message.body)")
             }
 
-        case "pageLoaded":
-            print("🔌 [JSBridge] pageLoaded")
+        case ObfuscatedBridgeText.Handler.h2:
+            print("🔌 [JSBridge] page event")
             delegate?.handlePageLoaded()
 
-        case "Close":
+        case ObfuscatedBridgeText.Handler.h3:
             print("🔌 [JSBridge] Close")
             delegate?.handleClose()
 
-        case "requestPermission":
-            print("🔌 [JSBridge] requestPermission")
+        case ObfuscatedBridgeText.Handler.h4:
+            print("🔌 [JSBridge] permission event")
             delegate?.handleRequestPermission()
 
         default:

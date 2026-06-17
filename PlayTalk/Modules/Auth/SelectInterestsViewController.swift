@@ -1,7 +1,7 @@
 import UIKit
 
 /// 兴趣选择页 - 对应 Android GameMic 的 SelectInterestsActivity
-/// 4个游戏卡片可选（最多2个）：PUBG / Minecraft / Fortnite / TheSims
+/// 4个游戏卡片可选（最多2个）：Mobile Legends / Roblox / Brawl Stars / Among Us
 /// 选完后保存用户资料，跳转主页
 class SelectInterestsViewController: UIViewController {
 
@@ -20,10 +20,10 @@ class SelectInterestsViewController: UIViewController {
 
     /// 4个游戏数据
     private let games: [(name: String, image: String)] = [
-        ("PUBG", "ph_pubg"),
-        ("Minecraft", "ph_minecraft"),
-        ("Fortnite", "ph_fortnite"),
-        ("TheSims", "ph_thesims")
+        ("Mobile Legends", "ph_pubg"),
+        ("Roblox", "ph_minecraft"),
+        ("Brawl Stars", "ph_fortnite"),
+        ("Among Us", "ph_thesims")
     ]
 
     // MARK: - UI 组件
@@ -281,7 +281,7 @@ class SelectInterestsViewController: UIViewController {
             interests: interests
         )
 
-        showToast("Welcome to PlayMeet!")
+        showToast("Welcome to VibeGo!")
 
         // 延迟跳转主页
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in

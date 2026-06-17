@@ -8,10 +8,10 @@ class CreateRoomViewController: UIViewController {
 
     // MARK: - 状态
 
-    /// 选中的游戏标签（默认 PUBG）
-    private var selectedTag: String = "PUBG"
+    /// 选中的游戏标签（默认 Mobile Legends）
+    private var selectedTag: String = "Mobile Legends"
     /// 游戏标签列表
-    private let gameTags = ["PUBG", "Minecraft", "Fortnite", "TheSims"]
+    private let gameTags = ["Mobile Legends", "Roblox", "Brawl Stars", "Among Us"]
     /// 标签按钮数组
     private var tagButtons: [UIButton] = []
     private var selectedCoverImageName: String?
@@ -237,6 +237,16 @@ class CreateRoomViewController: UIViewController {
         updateTagUI()
     }
 
+    private func assetPrefix(for tag: String) -> String {
+        switch tag {
+        case "Mobile Legends": return "pubg"
+        case "Roblox": return "minecraft"
+        case "Brawl Stars": return "fortnite"
+        case "Among Us": return "thesims"
+        default: return tag.lowercased().replacingOccurrences(of: " ", with: "")
+        }
+    }
+
     // MARK: - 事件
 
     private func setupActions() {
@@ -269,7 +279,7 @@ class CreateRoomViewController: UIViewController {
 
     private func updateCoverForSelectedTag() {
         guard selectedCoverImage == nil else { return }
-        let imageName = "ph_\(selectedTag.lowercased())"
+        let imageName = "ph_\(assetPrefix(for: selectedTag))"
         selectedCoverImageName = imageName
         coverImageView.image = UIImage(named: imageName)
         addCoverLabel.isHidden = true
@@ -324,7 +334,7 @@ class CreateRoomViewController: UIViewController {
         let room = VoiceRoom(
             roomId: roomId,
             title: roomName,
-            coverImage: selectedCoverImageName ?? "ph_\(selectedTag.lowercased())",
+            coverImage: selectedCoverImageName ?? "ph_\(assetPrefix(for: selectedTag))",
             coverUri: selectedCoverUri,
             gameTag: selectedTag,
             description: profileText.isEmpty ? "Welcome to \(roomName)!" : profileText,
@@ -359,7 +369,7 @@ extension CreateRoomViewController: PHPickerViewControllerDelegate {
             guard let self, let image = image as? UIImage else { return }
             DispatchQueue.main.async {
                 self.selectedCoverImage = image
-                self.selectedCoverImageName = "ph_\(self.selectedTag.lowercased())"
+                self.selectedCoverImageName = "ph_\(self.assetPrefix(for: self.selectedTag))"
                 self.selectedCoverUri = self.saveCoverImage(image)
                 self.coverImageView.image = image
                 self.addCoverLabel.isHidden = true

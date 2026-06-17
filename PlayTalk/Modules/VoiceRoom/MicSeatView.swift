@@ -137,7 +137,7 @@ class MicSeatView: UIView {
         } else {
             // 有人状态
             avatarImageView.isHidden = false
-            avatarImageView.image = UIImage.playTalkImage(namedOrPath: avatarImage)
+            avatarImageView.image = UIImage.gameVibeImage(namedOrPath: avatarImage)
             statusIcon.isHidden = true
             avatarContainer.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.2)
         }

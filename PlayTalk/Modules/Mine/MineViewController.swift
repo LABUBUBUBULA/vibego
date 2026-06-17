@@ -152,7 +152,7 @@ class MineViewController: UIViewController {
         let level = makeLevelIcon(level: user.level)
         badgesStack.addArrangedSubview(level)
 
-        let game = makeGamePill(text: user.interests.split(separator: ",").first.map(String.init) ?? "PUBG")
+        let game = makeGamePill(text: user.interests.split(separator: ",").first.map(String.init) ?? "Mobile Legends")
         badgesStack.addArrangedSubview(game)
 
         let edit = UIButton(type: .system)
@@ -176,7 +176,7 @@ class MineViewController: UIViewController {
             a.foregroundColor = UIColor.white
             return a
         }
-        homepageCfg.title = "Homepage ›"
+        homepageCfg.title = "View Profile ›"
         homepage.configuration = homepageCfg
         homepage.backgroundColor = UIColor.white.withAlphaComponent(0.08)
         homepage.layer.cornerRadius = 12
@@ -245,7 +245,7 @@ class MineViewController: UIViewController {
     }
 
     private func makeGamePill(text: String) -> UIView {
-        let view = GradientView(colors: [UIColor(hex: "#65C8FF"), UIColor(hex: "#4B78FF")])
+        let view = GradientView(colors: [Theme.Colors.primaryPurple, Theme.Colors.accentCyan])
         view.layer.cornerRadius = 12
         view.clipsToBounds = true
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -512,11 +512,13 @@ class MineViewController: UIViewController {
 
     private func createLogoutButton() -> UIButton {
         let button = UIButton(type: .system)
-        button.setTitle("Log Out", for: .normal)
-        button.setTitleColor(Theme.Colors.primaryYellow, for: .normal)
-        button.titleLabel?.font = Theme.Fonts.bold(18)
-        button.backgroundColor = Theme.Colors.cardBackground
-        button.layer.cornerRadius = 12
+        button.setTitle("Sign Out", for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = Theme.Fonts.bold(16)
+        button.backgroundColor = UIColor(hex: "#CC3333").withAlphaComponent(0.15)
+        button.layer.cornerRadius = 14
+        button.layer.borderWidth = 1
+        button.layer.borderColor = UIColor(hex: "#CC3333").withAlphaComponent(0.3).cgColor
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(logoutTapped), for: .touchUpInside)
         return button

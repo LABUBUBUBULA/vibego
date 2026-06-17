@@ -15,8 +15,10 @@ class WelcomeViewController: UIViewController {
     /// Logo图片
     private let logoImageView: UIImageView = {
         let iv = UIImageView()
-        iv.image = UIImage(named: "logo")
-        iv.contentMode = .scaleAspectFit
+        iv.image = UIImage(named: "SplashLogo")
+        iv.contentMode = .scaleAspectFill
+        iv.layer.cornerRadius = 30
+        iv.layer.masksToBounds = true
         iv.translatesAutoresizingMaskIntoConstraints = false
         return iv
     }()
@@ -24,7 +26,7 @@ class WelcomeViewController: UIViewController {
     /// App名称标题
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "PlayMeet"
+        label.text = "VibeGo"
         label.font = Theme.Fonts.bold(32)
         label.textColor = Theme.Colors.primaryYellow
         label.textAlignment = .center
@@ -35,7 +37,7 @@ class WelcomeViewController: UIViewController {
     /// 副标题
     private let subtitleLabel: UILabel = {
         let label = UILabel()
-        label.text = "Voice Game Forum, Group Voice Chat"
+        label.text = "Game Voice Chat, Connect & Play"
         label.font = Theme.Fonts.regular(14)
         label.textColor = Theme.Colors.textSecondary
         label.textAlignment = .center
@@ -43,19 +45,19 @@ class WelcomeViewController: UIViewController {
         return label
     }()
 
-    /// 快速注册按钮（对应 Android btn_quick_register）
+    /// 快速注册按钮
     private let quickRegisterButton: UIButton = {
         let btn = UIButton(type: .system)
         btn.setTitle("Quick Register", for: .normal)
         btn.setTitleColor(Theme.Colors.darkerBackground, for: .normal)
         btn.titleLabel?.font = Theme.Fonts.bold(16)
         btn.backgroundColor = Theme.Colors.primaryYellow
-        btn.layer.cornerRadius = 25
+        btn.layer.cornerRadius = 14
         btn.translatesAutoresizingMaskIntoConstraints = false
         return btn
     }()
 
-    /// 邮箱登录链接（对应 Android tv_email_sign_in）
+    /// 邮箱登录链接
     private let emailSignInButton: UIButton = {
         let btn = UIButton(type: .system)
         btn.setTitle("Sign in with Email", for: .normal)

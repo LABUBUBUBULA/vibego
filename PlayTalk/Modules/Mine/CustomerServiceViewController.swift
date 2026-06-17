@@ -113,7 +113,7 @@ class CustomerServiceViewController: UIViewController {
     private func loadInitialMessages() {
         messages = [
             SupportMessage(
-                text: "Hi, welcome to PlayMeet customer service. You can choose a common problem or send us a message.",
+                text: "Hi, welcome to VibeGo customer service. You can choose a common problem or send us a message.",
                 isUser: false,
                 showsProblems: true,
                 showsContact: true,

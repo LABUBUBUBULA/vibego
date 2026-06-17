@@ -13,14 +13,16 @@ final class SplashViewController: UIViewController {
 
     private let logoView: UIImageView = {
         let imageView = UIImageView(image: UIImage(named: "SplashLogo"))
-        imageView.contentMode = .scaleAspectFit
+        imageView.contentMode = .scaleAspectFill
+        imageView.layer.cornerRadius = 26
+        imageView.layer.masksToBounds = true
         imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
     }()
 
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "Voice Game Forum\nGroup Voice Chat"
+        label.text = "Game Voice Chat\nConnect & Play"
         label.font = Theme.Fonts.bold(20)
         label.textColor = .white
         label.textAlignment = .center
@@ -52,7 +54,7 @@ final class SplashViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor(hex: "#0A0626")
+        view.backgroundColor = Theme.Colors.splashBackground
         setupUI()
     }
 

@@ -10,32 +10,32 @@ final class MockDataManager {
 
     // MARK: - 固定用户列表（对应 Android GameMic 的 TestAccountManager + MockDataRepository）
 
-    /// 20 个固定用户数据（index 0 = Silas Brooks 测试账号，index 1-19 = Android MockDataRepository 用户）
+    /// 20 个固定用户数据（index 0 = vibego 预设账号，index 1-19 = Android MockDataRepository 用户）
     lazy var users: [User] = {
         // (name, id, avatar, gender, level, bg, interests, bio, isFollowing)
         let data: [(String, Int, String, String, Int, String, String, String, Bool)] = [
             // 测试账号 - 对应 Android TestAccountManager
-            ("Silas Brooks",       54782, "avatar_21", "male",   8, "pubg_3",  "PUBG,Minecraft",    "Welcome to GameMic! Let's game together!", false),
+            ("vibego",             54782, "avatar_21", "male",   8, "pubg_3",  "Mobile Legends,Roblox", "Welcome to VibeGo! Let's squad up and chat!", false),
             // Android MockDataRepository 用户 index 0-18
-            ("James Smith",        23491, "avatar_1",  "male",   5, "bg_1",   "PUBG",              "Love gaming and making new friends!",        false),
-            ("Emma Johnson",       78234, "avatar_2",  "female", 7, "bg_2",   "Minecraft",         "Just here to have fun and share awesome moments!", false),
-            ("Michael Williams",   91456, "avatar_3",  "male",   3, "bg_3",   "PUBG,Fortnite",     "Gamer for life! Let's squad up!",            false),
-            ("Sophia Brown",       12789, "avatar_4",  "female", 6, "bg_4",   "TheSims",           "Living my best gaming life!",                false),
-            ("William Jones",      67823, "avatar_5",  "male",   4, "bg_5",   "Fortnite,PUBG",     "Always ready for new adventures!",           true),
-            ("Olivia Garcia",      45129, "avatar_6",  "female", 8, "bg_6",   "Minecraft,TheSims", "Game hard, play harder!",                    true),
-            ("David Miller",       89237, "avatar_7",  "male",   2, "bg_7",   "PUBG",              "Making memories one game at a time!",        true),
-            ("Ava Davis",          34567, "avatar_8",  "female", 9, "bg_8",   "Fortnite",          "Friendly gamer looking for squad mates!",    true),
-            ("Joseph Rodriguez",   71289, "avatar_9",  "male",   5, "bg_9",   "Minecraft,PUBG",    "Let's win together!",                        true),
-            ("Isabella Martinez",  52341, "avatar_10", "female", 7, "bg_10",  "TheSims,Minecraft", "Passionate about gaming and good vibes!",    true),
-            ("Daniel Hernandez",   98765, "avatar_11", "male",   3, "bg_11",  "PUBG,Fortnite",     "Here to chat and play! Hit me up!",          true),
-            ("Mia Lopez",          43218, "avatar_12", "female", 6, "bg_12",  "TheSims",           "Gaming is my escape! Join me!",              true),
-            ("Matthew Wilson",     65432, "avatar_13", "male",   4, "bg_13",  "Minecraft",         "Pro player in training!",                    true),
-            ("Charlotte Anderson", 29876, "avatar_14", "female", 8, "bg_14",  "Fortnite,PUBG",     "Casual gamer with competitive spirit!",      true),
-            ("Christopher Thomas", 81234, "avatar_15", "male",   5, "bg_15",  "PUBG,Minecraft",    "Love meeting new people through gaming!",    true),
-            ("Amelia Taylor",      37654, "avatar_16", "female", 7, "bg_16",  "TheSims,Fortnite",  "Always up for a good game session!",         true),
-            ("Andrew Moore",       56789, "avatar_17", "male",   2, "bg_17",  "Minecraft",         "Gaming enthusiast and proud of it!",         false),
-            ("Harper Jackson",     42398, "avatar_18", "female", 6, "bg_18",  "Fortnite",          "Let's create epic gaming moments!",          false),
-            ("Joshua Martin",      73456, "avatar_19", "male",   4, "bg_19",  "PUBG,Minecraft",    "Friendly, fun, and ready to play!",          false),
+            ("James Smith",        23491, "avatar_1",  "male",   5, "bg_1",   "Mobile Legends", "Looking for chill teammates and voice rooms!", false),
+            ("Emma Johnson",       78234, "avatar_2",  "female", 7, "bg_2",   "Roblox",         "Here for fun games and good conversations!", false),
+            ("Michael Williams",   91456, "avatar_3",  "male",   3, "bg_3",   "Mobile Legends,Brawl Stars", "Always ready for a quick match!", false),
+            ("Sophia Brown",       12789, "avatar_4",  "female", 6, "bg_4",   "Among Us",       "Party games, voice chat, and friendly vibes!", false),
+            ("William Jones",      67823, "avatar_5",  "male",   4, "bg_5",   "Brawl Stars,Mobile Legends", "Team up anytime, let's win together!", true),
+            ("Olivia Garcia",      45129, "avatar_6",  "female", 8, "bg_6",   "Roblox,Among Us", "Game hard, laugh harder!", true),
+            ("David Miller",       89237, "avatar_7",  "male",   2, "bg_7",   "Mobile Legends", "Rank push and voice chat welcome!", true),
+            ("Ava Davis",          34567, "avatar_8",  "female", 9, "bg_8",   "Brawl Stars",    "Friendly player looking for squad mates!", true),
+            ("Joseph Rodriguez",   71289, "avatar_9",  "male",   5, "bg_9",   "Roblox,Mobile Legends", "Let's play and talk together!", true),
+            ("Isabella Martinez",  52341, "avatar_10", "female", 7, "bg_10",  "Among Us,Roblox", "Party rooms and good vibes only!", true),
+            ("Daniel Hernandez",   98765, "avatar_11", "male",   3, "bg_11",  "Mobile Legends,Brawl Stars", "Here to chat and team up!", true),
+            ("Mia Lopez",          43218, "avatar_12", "female", 6, "bg_12",  "Among Us",       "Mystery games and voice rooms are my thing!", true),
+            ("Matthew Wilson",     65432, "avatar_13", "male",   4, "bg_13",  "Roblox",         "Casual player, always down for a room!", true),
+            ("Charlotte Anderson", 29876, "avatar_14", "female", 8, "bg_14",  "Brawl Stars,Mobile Legends", "Fast matches, fun chats, no pressure!", true),
+            ("Christopher Thomas", 81234, "avatar_15", "male",   5, "bg_15",  "Mobile Legends,Roblox", "Love meeting new people through games!", true),
+            ("Amelia Taylor",      37654, "avatar_16", "female", 7, "bg_16",  "Among Us,Brawl Stars", "Always up for a good game session!", true),
+            ("Andrew Moore",       56789, "avatar_17", "male",   2, "bg_17",  "Roblox",         "Game fan and proud of it!", false),
+            ("Harper Jackson",     42398, "avatar_18", "female", 6, "bg_18",  "Brawl Stars",    "Let's create fun match moments!", false),
+            ("Joshua Martin",      73456, "avatar_19", "male",   4, "bg_19",  "Mobile Legends,Roblox", "Friendly, fun, and ready to play!", false),
         ]
 
         return data.map { d in
@@ -80,45 +80,55 @@ final class MockDataManager {
     // MARK: - 语音房数据（对应 Android VoiceRoomRepository）
 
     /// 游戏分类列表
-    let gameCategories = ["Popular", "PUBG", "Minecraft", "Fortnite", "TheSims"]
+    let gameCategories = ["Popular", "Mobile Legends", "Roblox", "Brawl Stars", "Among Us"]
+
+    private func gameAssetPrefix(for tag: String) -> String {
+        switch tag {
+        case "Mobile Legends": return "pubg"
+        case "Roblox": return "minecraft"
+        case "Brawl Stars": return "fortnite"
+        case "Among Us": return "thesims"
+        default: return tag.lowercased().replacingOccurrences(of: " ", with: "")
+        }
+    }
 
     /// 所有语音房数据
     lazy var voiceRooms: [VoiceRoom] = {
         let roomTitles = [
-            "PUBG Squad Up!", "Minecraft Build Party", "Fortnite Duo Arena",
-            "Sims House Tour", "Battle Royale Chat", "Redstone Engineering",
-            "Creative Mode Fun", "Pro Scrims Lobby", "Chill Gaming Vibes",
-            "Tournament Practice", "New Player Welcome", "Speed Build Challenge",
-            "Story Mode Discussion", "Rank Push Together", "Music & Gaming",
-            "Late Night Chat", "Morning Coffee Games", "Weekend Warriors",
-            "Strategy Discussion", "Just Chatting"
+            "Mobile Legends Rank Push", "Roblox Hangout Party", "Brawl Stars Trio Queue",
+            "Among Us Mystery Lobby", "Mobile Legends Duo Lane", "Roblox Roleplay Room",
+            "Roblox Obby Challenge", "Mobile Legends Squad Lobby", "Brawl Stars Chill Club",
+            "Mobile Legends Tournament Prep", "Brawl Stars New Players", "Roblox Build Challenge",
+            "Among Us Voice Debate", "Mobile Legends Mythic Grind", "Among Us Party Chat",
+            "Brawl Stars Late Night", "Mobile Legends Morning Queue", "Roblox Weekend Hangout",
+            "Brawl Stars Strategy Talk", "Among Us Just Chatting"
         ]
 
-        let tags = ["PUBG", "Minecraft", "Fortnite", "TheSims", "PUBG",
-                    "Minecraft", "Minecraft", "PUBG", "Fortnite", "PUBG",
-                    "Fortnite", "Minecraft", "TheSims", "PUBG", "TheSims",
-                    "Fortnite", "PUBG", "Minecraft", "Fortnite", "TheSims"]
+        let tags = ["Mobile Legends", "Roblox", "Brawl Stars", "Among Us", "Mobile Legends",
+                    "Roblox", "Roblox", "Mobile Legends", "Brawl Stars", "Mobile Legends",
+                    "Brawl Stars", "Roblox", "Among Us", "Mobile Legends", "Among Us",
+                    "Brawl Stars", "Mobile Legends", "Roblox", "Brawl Stars", "Among Us"]
 
         let descriptions = [
-            "Looking for squad members, mic required",
-            "Come build amazing structures together",
-            "Duo arena practice, NAE servers",
-            "Touring the best Sims builds",
-            "Open chat for all BR fans",
-            "Learning redstone circuits together",
-            "Free build, no rules, just fun",
-            "Serious practice only, no trolling",
-            "Relax and play, all games welcome",
+            "Looking for ranked teammates, mic welcome",
+            "Come hang out and play together",
+            "Trio queue, friendly players only",
+            "Voice chat for crew and impostors",
+            "Open chat for lane partners",
+            "Roleplay rooms and mini games",
+            "Try obbies, vote for the best run",
+            "Serious practice, no trolling",
+            "Relax and brawl, all players welcome",
             "Preparing for next tournament",
             "Beginners welcome, we'll teach you",
-            "Timed builds, vote for the best",
-            "Discussing game lore and stories",
+            "Build, explore, and show your world",
+            "Discuss clues before voting",
             "Grinding ranks together, let's go!",
-            "Share music while we game",
+            "Party chat between quick rounds",
             "Night owls gaming session",
-            "Early birds, grab your coffee",
+            "Early queue, grab your coffee",
             "Weekend gaming marathon",
-            "Discussing strategies and tactics",
+            "Discussing maps and team comps",
             "No game needed, just hang out"
         ]
 
@@ -127,7 +137,7 @@ final class MockDataManager {
             return VoiceRoom(
                 roomId: "room_\(1000 + i)",
                 title: roomTitles[i],
-                coverImage: "\(tags[i].lowercased())_\((i % 6) + 1)",
+                coverImage: "\(gameAssetPrefix(for: tags[i]))_\((i % 6) + 1)",
                 coverUri: nil,
                 gameTag: tags[i],
                 description: descriptions[i],
@@ -290,10 +300,10 @@ final class MockDataManager {
     /// 热门帖子（对应 Android ForumFragment 的 5 个热帖）
     lazy var hotPosts: [Post] = {
         let titles = [
-            "Best PUBG drop locations in 2024",
-            "Minecraft 1.21 update features revealed",
-            "Fortnite Chapter 5 Season 2 tier list",
-            "The Sims 5 announcement breakdown",
+            "Mobile Legends rank push tips for new squads",
+            "Best Roblox worlds to explore with friends",
+            "Brawl Stars trio comps that work well",
+            "Among Us voice chat rules for fair games",
             "Top 10 gaming headsets for voice chat"
         ]
 
@@ -331,10 +341,10 @@ final class MockDataManager {
     }
 
     let gameChannels: [GameChannel] = [
-        GameChannel(name: "PUBG", discussionCount: "228 People Discuss", coverImage: "ph_pubg"),
-        GameChannel(name: "Minecraft", discussionCount: "486 People Discuss", coverImage: "ph_minecraft"),
-        GameChannel(name: "Fortnite", discussionCount: "368 People Discuss", coverImage: "ph_fortnite"),
-        GameChannel(name: "TheSims", discussionCount: "325 People Discuss", coverImage: "ph_thesims")
+        GameChannel(name: "Mobile Legends", discussionCount: "528 People Discuss", coverImage: "ph_pubg"),
+        GameChannel(name: "Roblox", discussionCount: "486 People Discuss", coverImage: "ph_minecraft"),
+        GameChannel(name: "Brawl Stars", discussionCount: "368 People Discuss", coverImage: "ph_fortnite"),
+        GameChannel(name: "Among Us", discussionCount: "325 People Discuss", coverImage: "ph_thesims")
     ]
 
     // MARK: - 用户发布的帖子（持久化）
@@ -424,9 +434,9 @@ final class MockDataManager {
         guard isPresetUser else { return [] }
         // 无持久化数据 → 使用预设值
         let lastMessages = [
-            "Let's play PUBG together!",
+            "Let's play Mobile Legends together!",
             "I saved you a seat in my room.",
-            "Minecraft build party starts soon.",
+            "Roblox party starts soon.",
             "Send me your squad invite.",
             "Voice chat later?"
         ]

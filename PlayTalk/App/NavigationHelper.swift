@@ -2,16 +2,11 @@ import UIKit
 
 final class AppNavigationController: UINavigationController, UINavigationControllerDelegate, UIGestureRecognizerDelegate {
 
-    private lazy var fullScreenPanGesture: UIPanGestureRecognizer = {
-        let gesture = UIPanGestureRecognizer()
-        gesture.maximumNumberOfTouches = 1
-        gesture.delegate = self
-        return gesture
-    }()
-
     override func viewDidLoad() {
         super.viewDidLoad()
         delegate = self
+        interactivePopGestureRecognizer?.delegate = self
+        interactivePopGestureRecognizer?.isEnabled = true
 
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
@@ -22,35 +17,21 @@ final class AppNavigationController: UINavigationController, UINavigationControl
         navigationBar.scrollEdgeAppearance = appearance
         navigationBar.compactAppearance = appearance
         navigationBar.tintColor = .white
-
-        setupFullScreenPopGesture()
-    }
-
-    private func setupFullScreenPopGesture() {
-        guard let targets = interactivePopGestureRecognizer?.value(forKey: "targets") as? [AnyObject] else { return }
-        fullScreenPanGesture.setValue(targets, forKey: "targets")
-        view.addGestureRecognizer(fullScreenPanGesture)
-        interactivePopGestureRecognizer?.isEnabled = false
     }
 
     func navigationController(_ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool) {
         let shouldHide = viewController is MainTabBarController
             || viewController is UserProfileViewController
         setNavigationBarHidden(shouldHide, animated: animated)
+        // 导航栏隐藏时系统会禁用侧滑手势，必须每次重新启用
+        interactivePopGestureRecognizer?.isEnabled = true
+        interactivePopGestureRecognizer?.delegate = self
     }
 
     // MARK: - UIGestureRecognizerDelegate
 
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        guard viewControllers.count > 1 else { return false }
-        guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return true }
-        let velocity = pan.velocity(in: view)
-        // 只响应向右滑动，且水平速度大于垂直速度
-        return velocity.x > 0 && abs(velocity.x) > abs(velocity.y)
-    }
-
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        return false
+        return viewControllers.count > 1
     }
 }
 

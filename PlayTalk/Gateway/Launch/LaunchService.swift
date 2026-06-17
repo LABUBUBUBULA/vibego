@@ -2,7 +2,6 @@ import Foundation
 import CoreTelephony
 
 /// 启动接口调用 + A/B 分流判断
-/// 接口: /opi/v1/get/app/configo (末尾 o)
 final class LaunchService {
 
     static let shared = LaunchService()

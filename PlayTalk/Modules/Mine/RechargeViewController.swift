@@ -10,11 +10,11 @@ class RechargeViewController: UIViewController {
 
     /// 充值套餐（对应 Android 的 5 个金币内购套餐）
     private let packages: [(coins: Int, price: String, productId: String)] = [
-        (100, "$0.99", "com.playtalklive.coins100"),
-        (500, "$4.99", "com.playtalklive.coins500"),
-        (1000, "$9.99", "com.playtalklive.coins1000"),
-        (5000, "$49.99", "com.playtalklive.coins5000"),
-        (10000, "$99.99", "com.playtalklive.coins10000"),
+        (100, "$0.99", "com.vibego.coins100"),
+        (500, "$4.99", "com.vibego.coins500"),
+        (1000, "$9.99", "com.vibego.coins1000"),
+        (5000, "$49.99", "com.vibego.coins5000"),
+        (10000, "$99.99", "com.vibego.coins10000"),
     ]
 
     /// 当前选中套餐索引

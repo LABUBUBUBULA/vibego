@@ -31,7 +31,7 @@ class ForumViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Game forum"    // 对应 Android 的 "Game forum" 标题（28sp bold）
+        title = "Community"
         view.backgroundColor = Theme.Colors.darkBackground
         setupUI()
     }

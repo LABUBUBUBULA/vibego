@@ -72,6 +72,16 @@ class GameForumViewController: UIViewController {
         ])
     }
 
+    private func assetPrefix(for gameName: String) -> String {
+        switch gameName {
+        case "Mobile Legends": return "pubg"
+        case "Roblox": return "minecraft"
+        case "Brawl Stars": return "fortnite"
+        case "Among Us": return "thesims"
+        default: return gameName.lowercased().replacingOccurrences(of: " ", with: "")
+        }
+    }
+
     /// 加载该游戏的帖子（Mock数据）
     private func loadPosts() {
         let users = MockDataManager.shared.users
@@ -86,7 +96,7 @@ class GameForumViewController: UIViewController {
             "Pro player settings for \(gameName)"
         ]
 
-        let imagePrefix = gameName.lowercased()
+        let imagePrefix = assetPrefix(for: gameName)
         let mockPosts = (0..<8).map { i in
             let user = users[(i + 1) % users.count]
             return Post(

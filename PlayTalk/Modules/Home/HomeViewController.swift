@@ -18,7 +18,7 @@ class HomeViewController: UIViewController {
 
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "Voice Game"
+        label.text = "VibeGo"
         label.font = Theme.Fonts.bold(28)
         label.textColor = Theme.Colors.textPrimary
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -137,7 +137,7 @@ class HomeViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Voice Game"    // 对应 Android 的 "Voice Game" 标题
+        title = "VibeGo"
         view.backgroundColor = Theme.Colors.darkBackground
         setupUI()
         setupActions()

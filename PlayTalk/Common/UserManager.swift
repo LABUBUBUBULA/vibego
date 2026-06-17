@@ -43,7 +43,7 @@ final class UserManager {
     /// 预设登录账号：用于展示完整 Mock 用户资料、头像、粉丝、聊天等
     private let presetAccounts: [String: (password: String, userIndex: Int)] = [
         "gamemic@gmail.com": ("123456789", 0),
-        "playmeet@gmail.com": ("123456789", 0)
+        "vibego@gmail.com": ("123456789", 0)
     ]
 
     // MARK: - 快速注册（对应 Android UserManager.quickRegister）
@@ -223,7 +223,7 @@ final class UserManager {
             registeredProfiles.removeValue(forKey: email)
             saveRegisteredData()
         } else {
-            deletedEmails.insert("playmeet@gmail.com")
+            deletedEmails.insert("vibego@gmail.com")
             deletedEmails.insert("gamemic@gmail.com")
             saveRegisteredData()
         }

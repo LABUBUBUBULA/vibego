@@ -2,7 +2,7 @@ import StoreKit
 import UIKit
 
 /// iOS 内购管理器 (StoreKit 2)
-/// H5 调 rechargePay 传 batchNo（产品ID） + callbackJson
+/// H5 发起内购
 /// 流程: 发起内购 → 显示 Loading → 支付成功 → 调验单接口
 final class PurchaseManager: NSObject {
 
@@ -27,7 +27,7 @@ final class PurchaseManager: NSObject {
         }
         isPurchasing = true
 
-        print("💰 [Purchase] 开始购买: batchNo=\(batchNo), callbackJson=\(callbackJson)")
+        print("💰 [Purchase] 开始购买")
         currentCallbackJson = callbackJson
         currentBatchNo = batchNo
         presentingVC = vc
@@ -72,7 +72,7 @@ final class PurchaseManager: NSObject {
                     }
                 case .userCancelled:
                     await MainActor.run {
-                        finishPurchase(success: false, message: "cancelled")
+                        finishPurchase(success: false, message: ObfuscatedBridgeText.Field.f13)
                     }
                 @unknown default:
                     await MainActor.run {
@@ -89,7 +89,7 @@ final class PurchaseManager: NSObject {
 
     // MARK: - 验单接口
 
-    /// 验单接口: /opi/v1/order/receip (末尾 p)
+    /// 验单接口
     /// 参数通配符：t → transactionId, p → payload, c → callbackResult
     private func verifyPurchase(transactionId: String, receipt: Data, callbackJson: String) {
         let payload = receipt.base64EncodedString()
@@ -123,17 +123,20 @@ final class PurchaseManager: NSObject {
         isPurchasing = false
 
         // 通过 JS 通知 H5 购买结果，让 H5 自己处理 UI
-        let state = success ? "success" : "failed"
+        let state = success ? ObfuscatedBridgeText.Field.f11 : ObfuscatedBridgeText.Field.f12
         let safeMessage = message.replacingOccurrences(of: "'", with: "\\'")
+        let event = ObfuscatedBridgeText.Event.e2
+        let stateKey = ObfuscatedBridgeText.Field.f5
+        let messageKey = ObfuscatedBridgeText.Field.f6
         let js = """
-        window.dispatchEvent(new CustomEvent('nativePayResult', {
-            detail: { state: '\(state)', message: '\(safeMessage)' }
+        window.dispatchEvent(new CustomEvent('\(event)', {
+            detail: { '\(stateKey)': '\(state)', '\(messageKey)': '\(safeMessage)' }
         }));
         """
         presentingVC?.webView.evaluateJavaScript(js, completionHandler: nil)
 
         // 取消的不弹原生 alert，让 H5 处理
-        if message == "cancelled" { return }
+        if message == ObfuscatedBridgeText.Field.f13 { return }
 
         // 非取消的失败/成功才弹原生 alert
         guard let vc = presentingVC else { return }

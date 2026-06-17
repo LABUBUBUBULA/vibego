@@ -24,12 +24,12 @@ struct User: Codable {
 
     /// 获取可直接展示的头像图片
     var displayAvatarImage: UIImage? {
-        UIImage.playTalkImage(namedOrPath: displayAvatar)
+        UIImage.gameVibeImage(namedOrPath: displayAvatar)
     }
 }
 
 extension UIImage {
-    static func playTalkImage(namedOrPath source: String) -> UIImage? {
+    static func gameVibeImage(namedOrPath source: String) -> UIImage? {
         if FileManager.default.fileExists(atPath: source), let image = UIImage(contentsOfFile: source) {
             return image
         }

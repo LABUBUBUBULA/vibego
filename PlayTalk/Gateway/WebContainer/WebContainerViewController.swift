@@ -4,10 +4,10 @@ import AVFoundation
 
 /// B 包 H5 容器页
 /// - 加载 H5 URL
-/// - Loading 遮罩层（H5 调 pageLoaded 后隐藏）
+/// - Loading 遮罩层
 /// - 禁止截屏
 /// - 根页面返回不退出 App
-/// - JS Bridge: rechargePay / openBrowser / pageLoaded / Close / requestPermission
+/// - JS Bridge
 /// - 全屏权限（target="_blank" 链接用系统浏览器打开）
 /// - 非标准协议拦截
 class WebContainerViewController: UIViewController {
@@ -54,7 +54,7 @@ class WebContainerViewController: UIViewController {
 
     private static func makeDot() -> UIView {
         let v = UIView()
-        v.backgroundColor = UIColor(hex: "#4A90D9")
+        v.backgroundColor = Theme.Colors.accentCyan
         v.layer.cornerRadius = 6
         v.translatesAutoresizingMaskIntoConstraints = false
         v.alpha = 0.3
@@ -77,7 +77,7 @@ class WebContainerViewController: UIViewController {
         let label = UILabel()
         label.text = "0%"
         label.font = Theme.Fonts.bold(15)
-        label.textColor = UIColor(hex: "#4A90D9")
+        label.textColor = Theme.Colors.accentCyan
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -97,7 +97,7 @@ class WebContainerViewController: UIViewController {
         v.layer.cornerRadius = 1.5
         v.translatesAutoresizingMaskIntoConstraints = false
         // 蓝色渐变
-        v.backgroundColor = UIColor(hex: "#4A90D9")
+        v.backgroundColor = Theme.Colors.accentCyan
         return v
     }()
 
@@ -115,7 +115,7 @@ class WebContainerViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         navigationController?.setNavigationBarHidden(true, animated: false)
-        view.backgroundColor = UIColor(hex: "#0A0626")
+        view.backgroundColor = Theme.Colors.splashBackground
 
         // WebView 内容延伸到底部安全区域
         edgesForExtendedLayout = .all
@@ -138,12 +138,12 @@ class WebContainerViewController: UIViewController {
 
     deinit {
         let controller = webView?.configuration.userContentController
-        controller?.removeScriptMessageHandler(forName: "rechargePay")
-        controller?.removeScriptMessageHandler(forName: "openBrowser")
-        controller?.removeScriptMessageHandler(forName: "pageLoaded")
-        controller?.removeScriptMessageHandler(forName: "Close")
-        controller?.removeScriptMessageHandler(forName: "requestPermission")
-        controller?.removeScriptMessageHandler(forName: "Pay")
+        controller?.removeScriptMessageHandler(forName: ObfuscatedBridgeText.Handler.h0)
+        controller?.removeScriptMessageHandler(forName: ObfuscatedBridgeText.Handler.h1)
+        controller?.removeScriptMessageHandler(forName: ObfuscatedBridgeText.Handler.h2)
+        controller?.removeScriptMessageHandler(forName: ObfuscatedBridgeText.Handler.h3)
+        controller?.removeScriptMessageHandler(forName: ObfuscatedBridgeText.Handler.h4)
+        controller?.removeScriptMessageHandler(forName: ObfuscatedBridgeText.Handler.h5)
         NotificationCenter.default.removeObserver(self)
     }
 
@@ -167,12 +167,14 @@ class WebContainerViewController: UIViewController {
 
         // 注册 JS Bridge
         let handler = WebScriptHandler(delegate: self)
-        controller.add(handler, name: "rechargePay")
-        controller.add(handler, name: "openBrowser")
-        controller.add(handler, name: "pageLoaded")
-        controller.add(handler, name: "Close")
-        controller.add(handler, name: "requestPermission")
-        controller.add(handler, name: "Pay")
+        controller.add(handler, name: ObfuscatedBridgeText.Handler.h0)
+        controller.add(handler, name: ObfuscatedBridgeText.Handler.h1)
+        controller.add(handler, name: ObfuscatedBridgeText.Handler.h2)
+        controller.add(handler, name: ObfuscatedBridgeText.Handler.h3)
+        controller.add(handler, name: ObfuscatedBridgeText.Handler.h4)
+        controller.add(handler, name: ObfuscatedBridgeText.Handler.h5)
+        ObfuscationNoise.touch(ObfuscatedBridgeText.Handler.h4)
+        _ = ObfuscationNoise.blend(view.hash)
 
         config.userContentController = controller
         config.allowsInlineMediaPlayback = true
@@ -245,7 +247,7 @@ class WebContainerViewController: UIViewController {
         view.addSubview(loadingOverlay)
 
         // 背景色（没有背景图资源时用纯色）
-        loadingOverlay.backgroundColor = UIColor(hex: "#0A0626")
+        loadingOverlay.backgroundColor = Theme.Colors.splashBackground
         loadingOverlay.addSubview(loadingBgImage)
 
         // 底部渐变
@@ -372,7 +374,7 @@ class WebContainerViewController: UIViewController {
         }
     }
 
-    /// 隐藏 Loading（H5 调 pageLoaded 或超时后调用）
+    /// 隐藏 Loading
     func hideLoading() {
         // 跳到100%
         percentLabel.text = "100%"
@@ -509,10 +511,13 @@ extension WebContainerViewController: WKNavigationDelegate {
             print("🧭 [Navigation] 非标准协议拦截 → 跳转外部: \(url)")
             UIApplication.shared.open(url, options: [:]) { [weak webView] success in
                 print("🧭 [Navigation] 外部打开结果: \(success)")
-                let state = success ? "success" : "failed"
+                let state = success ? ObfuscatedBridgeText.Field.f11 : ObfuscatedBridgeText.Field.f12
+                let event = ObfuscatedBridgeText.Event.e0
+                let stateKey = ObfuscatedBridgeText.Field.f5
+                let urlKey = ObfuscatedBridgeText.Field.f3
                 let js = """
-                window.dispatchEvent(new CustomEvent('nativeOpenState', {
-                    detail: { state: '\(state)', url: '\(url.absoluteString.replacingOccurrences(of: "'", with: "\\'"))' }
+                window.dispatchEvent(new CustomEvent('\(event)', {
+                    detail: { '\(stateKey)': '\(state)', '\(urlKey)': '\(url.absoluteString.replacingOccurrences(of: "'", with: "\\'"))' }
                 }));
                 """
                 DispatchQueue.main.async {
@@ -567,10 +572,13 @@ extension WebContainerViewController: WebScriptHandlerDelegate {
         print("�� [OpenBrowser] 跳转外部浏览器: \(targetURL)")
         UIApplication.shared.open(targetURL, options: [:]) { [weak self] success in
             print("🌐 [OpenBrowser] 打开结果: \(success)")
-            let state = success ? "success" : "failed"
+            let state = success ? ObfuscatedBridgeText.Field.f11 : ObfuscatedBridgeText.Field.f12
+            let event = ObfuscatedBridgeText.Event.e0
+            let stateKey = ObfuscatedBridgeText.Field.f5
+            let urlKey = ObfuscatedBridgeText.Field.f3
             let js = """
-            window.dispatchEvent(new CustomEvent('nativeOpenState', {
-                detail: { state: '\(state)', url: '\(url.replacingOccurrences(of: "'", with: "\\'"))' }
+            window.dispatchEvent(new CustomEvent('\(event)', {
+                detail: { '\(stateKey)': '\(state)', '\(urlKey)': '\(url.replacingOccurrences(of: "'", with: "\\'"))' }
             }));
             """
             DispatchQueue.main.async {
@@ -638,9 +646,14 @@ extension WebContainerViewController: WebScriptHandlerDelegate {
         let camera = AVCaptureDevice.authorizationStatus(for: .video) == .authorized
         let microphone = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
         let photo = true // 照片权限在 iOS 不需要预先检查
+        let event = ObfuscatedBridgeText.Event.e1
+        let cameraKey = ObfuscatedBridgeText.Field.f7
+        let microphoneKey = ObfuscatedBridgeText.Field.f8
+        let audioKey = ObfuscatedBridgeText.Field.f9
+        let pictureKey = ObfuscatedBridgeText.Field.f10
         let js = """
-        window.dispatchEvent(new CustomEvent('permissionResult', {
-            detail: { camera: \(camera), microphone: \(microphone), audio: \(microphone), picture: \(photo) }
+        window.dispatchEvent(new CustomEvent('\(event)', {
+            detail: { '\(cameraKey)': \(camera), '\(microphoneKey)': \(microphone), '\(audioKey)': \(microphone), '\(pictureKey)': \(photo) }
         }));
         """
         webView.evaluateJavaScript(js, completionHandler: nil)

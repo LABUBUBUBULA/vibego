@@ -6,7 +6,7 @@ class UserProfileViewController: UIViewController {
     var user: User?
     private var primaryActionButton: UIButton?
 
-    private let profileBackgroundColor = UIColor(hex: "#191925")
+    private let profileBackgroundColor = Theme.Colors.profileBackground
 
     private let baseGiftCounts = [18, 8, 25, 13, 15, 5, 3, 4, 8, 11, 7, 21]
     private let baseGiftWallImageNames = ["gift_10", "gift_2", "gift_4", "gift_12", "gift_5", "gift_7", "gift_19", "gift_9", "gift_6", "gift_1", "gift_8", "gift_17"]
@@ -201,11 +201,11 @@ class UserProfileViewController: UIViewController {
         id.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(id)
 
-        let game = makeTextPill(text: user.interests.split(separator: ",").first.map(String.init) ?? "PUBG")
+        let game = makeTextPill(text: user.interests.split(separator: ",").first.map(String.init) ?? "Mobile Legends")
         container.addSubview(game)
 
         let bio = UILabel()
-        bio.text = user.bio.isEmpty ? "Welcome to GameMic! Let's game together!" : user.bio
+        bio.text = user.bio.isEmpty ? "Welcome to VibeGo! Let's squad up and chat!" : user.bio
         bio.font = Theme.Fonts.regular(16)
         bio.textColor = .white
         bio.numberOfLines = 0
@@ -359,7 +359,7 @@ class UserProfileViewController: UIViewController {
     }
 
     private func makeTextPill(text: String) -> UIView {
-        let pill = ProfileGradientView(colors: [UIColor(hex: "#65C8FF"), UIColor(hex: "#4B78FF")])
+        let pill = ProfileGradientView(colors: [Theme.Colors.primaryPurple, Theme.Colors.accentCyan])
         pill.layer.cornerRadius = 13
         pill.clipsToBounds = true
         pill.translatesAutoresizingMaskIntoConstraints = false
@@ -448,7 +448,7 @@ class UserProfileViewController: UIViewController {
         let isFollowing = MockDataManager.shared.isFollowing(userId: user.id)
         button.setTitle(isCurrentUser ? "Edit Profile" : (isFollowing ? "Following" : "Follow"), for: .normal)
         button.setTitleColor(isCurrentUser ? .black : .white, for: .normal)
-        button.backgroundColor = isCurrentUser ? Theme.Colors.primaryYellow : (isFollowing ? UIColor(hex: "#343545") : UIColor(hex: "#5A86FF"))
+        button.backgroundColor = isCurrentUser ? Theme.Colors.primaryPurple : (isFollowing ? Theme.Colors.textFieldBorder : Theme.Colors.primaryPurple)
     }
 
     @objc private func editProfileTapped() {

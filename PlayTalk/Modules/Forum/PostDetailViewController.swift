@@ -130,7 +130,7 @@ class PostDetailViewController: UIViewController {
     private func showReportSheet() {
         let alert = UIAlertController(
             title: "Report Post",
-            message: "Choose a reason. PlayMeet reviews reports about inappropriate content.",
+            message: "Choose a reason. VibeGo reviews reports about inappropriate content.",
             preferredStyle: .actionSheet
         )
         reportReasons.forEach { reason in

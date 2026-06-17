@@ -1,17 +1,24 @@
 import UIKit
 
 enum Theme {
-    // MARK: - Colors (matching GameMic Android dark theme)
+    // MARK: - Colors (深青冷酷风)
     enum Colors {
-        static let primaryYellow = UIColor(hex: "#FFD500")
-        static let primaryGreen = UIColor(hex: "#4CAF50")
-        static let darkBackground = UIColor(hex: "#1C1C28")
-        static let darkerBackground = UIColor(hex: "#16161E")
-        static let cardBackground = UIColor(hex: "#21222E")
+        static let primaryPurple = UIColor(hex: "#00E5A0")
+        static let accentCyan = UIColor(hex: "#00BCD4")
+        static let darkBackground = UIColor(hex: "#0B1A1A")
+        static let darkerBackground = UIColor(hex: "#071212")
+        static let cardBackground = UIColor(hex: "#122626")
         static let textPrimary = UIColor.white
-        static let textSecondary = UIColor(hex: "#999999")
-        static let separator = UIColor(hex: "#2A2A3A")
-        static let tabBarBackground = UIColor(hex: "#16161E")
+        static let textSecondary = UIColor(hex: "#8AABAB")
+        static let separator = UIColor(hex: "#1E3838")
+        static let tabBarBackground = UIColor(hex: "#071212")
+        static let splashBackground = UIColor(hex: "#050E0E")
+        static let profileBackground = UIColor(hex: "#0E2020")
+        static let textFieldBorder = UIColor(hex: "#1E3838")
+
+        // 兼容旧引用
+        static let primaryYellow = primaryPurple
+        static let primaryGreen = accentCyan
     }
 
     // MARK: - Fonts

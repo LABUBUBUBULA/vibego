@@ -1,7 +1,7 @@
 import Foundation
 
 /// 用户行为上报 - 异步，不阻塞用户流程
-/// 接口: /opi/v1/track/activv (末尾 v)
+/// 行为上报
 /// 参数通配符：最后一个字母匹配即可
 final class BehaviorTracker {
 

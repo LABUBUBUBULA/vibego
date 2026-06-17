@@ -277,7 +277,7 @@ class UserLevelViewController: UIViewController {
 
     private func applyLevelUpGradient() {
         let gradient = CAGradientLayer()
-        gradient.colors = [UIColor(hex: "#FF5285").cgColor, UIColor(hex: "#FFC0DD").cgColor]
+        gradient.colors = [Theme.Colors.primaryPurple.cgColor, UIColor(hex: "#C084FC").cgColor]
         gradient.startPoint = CGPoint(x: 0, y: 1)
         gradient.endPoint = CGPoint(x: 1, y: 0)
         levelUpButton.layer.insertSublayer(gradient, at: 0)

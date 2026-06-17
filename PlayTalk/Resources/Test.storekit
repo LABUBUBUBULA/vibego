@@ -1,0 +1,225 @@
+{
+  "identifier" : "F1A2B3C4-D5E6-7890-ABCD-EF1234567890",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "A001",
+      "localizations" : [
+        {
+          "description" : "100 Coins Pack",
+          "displayName" : "100 Coins",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.vibego.coins100",
+      "referenceName" : "A包 - 100 Coins ($0.99)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "A002",
+      "localizations" : [
+        {
+          "description" : "500 Coins Pack",
+          "displayName" : "500 Coins",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.vibego.coins500",
+      "referenceName" : "A包 - 500 Coins ($4.99)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "A003",
+      "localizations" : [
+        {
+          "description" : "1000 Coins Pack",
+          "displayName" : "1000 Coins",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.vibego.coins1000",
+      "referenceName" : "A包 - 1000 Coins ($9.99)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "49.99",
+      "familyShareable" : false,
+      "internalID" : "A004",
+      "localizations" : [
+        {
+          "description" : "5000 Coins Pack",
+          "displayName" : "5000 Coins",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.vibego.coins5000",
+      "referenceName" : "A包 - 5000 Coins ($49.99)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "99.99",
+      "familyShareable" : false,
+      "internalID" : "A005",
+      "localizations" : [
+        {
+          "description" : "10000 Coins Pack",
+          "displayName" : "10000 Coins",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.vibego.coins10000",
+      "referenceName" : "A包 - 10000 Coins ($99.99)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "B001",
+      "localizations" : [
+        {
+          "description" : "400 Diamonds Pack",
+          "displayName" : "400 Diamonds",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "zjtrfkkcxlbdqwiz",
+      "referenceName" : "B包 - 400 Diamonds ($0.99)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "1.99",
+      "familyShareable" : false,
+      "internalID" : "B002",
+      "localizations" : [
+        {
+          "description" : "800 Diamonds Pack",
+          "displayName" : "800 Diamonds",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "yxmmixcmhipqpcau",
+      "referenceName" : "B包 - 800 Diamonds ($1.99)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "B003",
+      "localizations" : [
+        {
+          "description" : "2450 Diamonds Pack",
+          "displayName" : "2450 Diamonds",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "tocurwynprjylxyr",
+      "referenceName" : "B包 - 2450 Diamonds ($4.99)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "B004",
+      "localizations" : [
+        {
+          "description" : "5150 Diamonds Pack",
+          "displayName" : "5150 Diamonds",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "bdyvlcsvataqwnzl",
+      "referenceName" : "B包 - 5150 Diamonds ($9.99)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "19.99",
+      "familyShareable" : false,
+      "internalID" : "B005",
+      "localizations" : [
+        {
+          "description" : "10800 Diamonds Pack",
+          "displayName" : "10800 Diamonds",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "ylfmjucgtcthuqpy",
+      "referenceName" : "B包 - 10800 Diamonds ($19.99)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "49.99",
+      "familyShareable" : false,
+      "internalID" : "B006",
+      "localizations" : [
+        {
+          "description" : "29400 Diamonds Pack",
+          "displayName" : "29400 Diamonds",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "cablnmmycrtnubbl",
+      "referenceName" : "B包 - 29400 Diamonds ($49.99)",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "99.99",
+      "familyShareable" : false,
+      "internalID" : "B007",
+      "localizations" : [
+        {
+          "description" : "63700 Diamonds Pack",
+          "displayName" : "63700 Diamonds",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "rnaywvslpnnpoujc",
+      "referenceName" : "B包 - 63700 Diamonds ($99.99)",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "loadProducts"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "app498702702Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "subscription"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

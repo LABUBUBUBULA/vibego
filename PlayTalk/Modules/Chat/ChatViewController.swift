@@ -40,7 +40,7 @@ class ChatViewController: UIViewController {
         let time: String
     }
 
-    private var storageKey: String { "playmeet_chat_\(UserManager.shared.currentAccountKey)_\(chatUser?.userId ?? 0)" }
+    private var storageKey: String { "vibego_chat_\(UserManager.shared.currentAccountKey)_\(chatUser?.userId ?? 0)" }
     private var peerAvatarImage: String { chatUser?.avatarImage ?? "avatar_2" }
     private var myAvatarImage: String { UserManager.shared.currentUser?.displayAvatar ?? MockDataManager.shared.currentUser.avatarImage }
 
@@ -304,9 +304,20 @@ class ChatViewController: UIViewController {
     private func updateInputContainerBottom(_ offset: CGFloat, notification: Notification) {
         let keyboardVisible = offset > 0
         inputContainer.isHidden = keyboardVisible
-        inputBarNormalBottomConstraint?.isActive = !keyboardVisible
-        inputBarKeyboardBottomConstraint?.constant = keyboardVisible ? -offset : 0
-        inputBarKeyboardBottomConstraint?.isActive = keyboardVisible
+
+        // 先 deactivate 再 activate，避免两个 bottom constraint 同时存在导致冲突
+        if keyboardVisible {
+            inputBarNormalBottomConstraint?.isActive = false
+            inputBarKeyboardBottomConstraint?.constant = -offset
+            inputBarKeyboardBottomConstraint?.isActive = true
+        } else {
+            inputBarKeyboardBottomConstraint?.isActive = false
+            inputBarNormalBottomConstraint?.isActive = true
+        }
+
+        // 确保 inputBar 始终在最前面，不被 tableView 遮挡
+        view.bringSubviewToFront(inputBar)
+
         let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? TimeInterval ?? 0.25
         let curveValue = notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt ?? UIView.AnimationOptions.curveEaseInOut.rawValue
         UIView.animate(withDuration: duration, delay: 0, options: UIView.AnimationOptions(rawValue: curveValue << 16)) {
@@ -356,7 +367,7 @@ class ChatViewController: UIViewController {
         selectedReportReason = nil
         let alert = UIAlertController(
             title: "Report User",
-            message: "Choose a reason. PlayMeet reviews reports about chat safety, scams, spam, fake profiles, and inappropriate content.",
+            message: "Choose a reason. VibeGo reviews reports about chat safety, scams, spam, fake profiles, and inappropriate content.",
             preferredStyle: .actionSheet
         )
         reportReasons.forEach { reason in
@@ -581,9 +592,8 @@ class ChatViewController: UIViewController {
     /// 发送文本消息
     @objc private func sendTapped() {
         guard let text = inputField.text?.trimmingCharacters(in: .whitespaces), !text.isEmpty else { return }
-        appendMessage(.text(text), isMe: true)
         inputField.text = ""
-        dismissKeyboard()
+        appendMessage(.text(text), isMe: true)
     }
 
     private func appendMessage(_ kind: ChatMessageKind, isMe: Bool) {
@@ -890,7 +900,7 @@ class ChatBubbleCell: UITableViewCell {
 
     /// 配置气泡内容：文本/语音/图片/视频/礼物
     fileprivate func configure(kind: ChatViewController.ChatMessageKind, isMe: Bool, avatarImage: String) {
-        avatarImageView.image = UIImage.playTalkImage(namedOrPath: avatarImage)
+        avatarImageView.image = UIImage.gameVibeImage(namedOrPath: avatarImage)
         avatarLeadingConstraint?.isActive = !isMe
         avatarTrailingConstraint?.isActive = isMe
         contentStack.arrangedSubviews.forEach { view in
