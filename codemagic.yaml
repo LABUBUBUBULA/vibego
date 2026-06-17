@@ -48,14 +48,18 @@ workflows:
         script: |
           cd $CM_BUILD_DIR
           set -o pipefail
+          set +e
           xcode-project build-ipa \
             --project "VibeGo.xcodeproj" \
             --scheme "VibeGo" 2>&1 | tee build_ipa.log
           build_status=${PIPESTATUS[0]}
+          set -e
           if [ "$build_status" -ne 0 ]; then
             echo "xcode-project build-ipa failed with status $build_status"
             echo "Dumping xcodebuild logs from /tmp/xcodebuild_logs"
-            find /tmp/xcodebuild_logs -type f -maxdepth 1 -print -exec tail -n 300 {} \; || true
+            find /tmp/xcodebuild_logs -maxdepth 1 -type f -print -exec tail -n 500 {} \; || true
+            echo "Dumping DerivedData xcactivitylog paths"
+            find "$HOME/Library/Developer/Xcode/DerivedData" -name "*.xcactivitylog" -print || true
           fi
           exit "$build_status"
 
