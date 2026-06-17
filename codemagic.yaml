@@ -10,10 +10,10 @@ workflows:
       groups:
         - github_credentials
       ios_signing:
-        provisioning_profiles:
-          - vibego_appstore
-        certificates:
-          -  _vibego_distribution
+    provisioning_profiles:
+      - vibegoappstore2
+    certificates:
+      - vibegodist2
     scripts:
       - name: Install XcodeGen
         script: |
