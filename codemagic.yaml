@@ -13,7 +13,7 @@ workflows:
         provisioning_profiles:
           - vibego_appstore
         certificates:
-          -  vibego_distribution
+          -  _vibego_distribution
     scripts:
       - name: Install XcodeGen
         script: |
