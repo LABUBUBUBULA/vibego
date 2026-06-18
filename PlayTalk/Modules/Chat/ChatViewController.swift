@@ -18,7 +18,7 @@ class ChatViewController: UIViewController {
     fileprivate enum ChatMessageKind {
         case text(String)
         case voice(url: URL, duration: Int)
-        case image(UIImage)
+        case image(UIImage, url: URL?)
         case video(url: URL, thumbnail: UIImage?)
         case gift(Gift, count: Int)
     }
@@ -33,6 +33,7 @@ class ChatViewController: UIViewController {
     private struct StoredChatMessage: Codable {
         let kind: String
         let text: String
+        let mediaPath: String
         let duration: Int
         let giftName: String
         let giftCount: Int
@@ -43,6 +44,14 @@ class ChatViewController: UIViewController {
     private var storageKey: String { "vibego_chat_\(UserManager.shared.currentAccountKey)_\(chatUser?.userId ?? 0)" }
     private var peerAvatarImage: String { chatUser?.avatarImage ?? "avatar_2" }
     private var myAvatarImage: String { UserManager.shared.currentUser?.displayAvatar ?? MockDataManager.shared.currentUser.avatarImage }
+    private var mediaDirectory: URL {
+        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let directory = documents.appendingPathComponent("ChatMedia", isDirectory: true)
+        if !FileManager.default.fileExists(atPath: directory.path) {
+            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        }
+        return directory
+    }
 
     private var chatMessages: [ChatMessageItem] = []
     private let reportReasons = [
@@ -445,7 +454,7 @@ class ChatViewController: UIViewController {
             try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
             try session.setActive(true)
 
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent("voice-\(Int(Date().timeIntervalSince1970)).m4a")
+            let url = mediaDirectory.appendingPathComponent("voice-\(UUID().uuidString).m4a")
             let settings: [String: Any] = [
                 AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
                 AVSampleRateKey: 44_100,
@@ -667,15 +676,15 @@ class ChatViewController: UIViewController {
     private func storedMessage(from item: ChatMessageItem) -> StoredChatMessage? {
         switch item.kind {
         case .text(let text):
-            return StoredChatMessage(kind: "text", text: text, duration: 0, giftName: "", giftCount: 0, isMe: item.isMe, time: item.time)
-        case .voice(_, let duration):
-            return StoredChatMessage(kind: "voice", text: "", duration: duration, giftName: "", giftCount: 0, isMe: item.isMe, time: item.time)
-        case .image:
-            return StoredChatMessage(kind: "image", text: "", duration: 0, giftName: "", giftCount: 0, isMe: item.isMe, time: item.time)
-        case .video:
-            return StoredChatMessage(kind: "video", text: "", duration: 0, giftName: "", giftCount: 0, isMe: item.isMe, time: item.time)
+            return StoredChatMessage(kind: "text", text: text, mediaPath: "", duration: 0, giftName: "", giftCount: 0, isMe: item.isMe, time: item.time)
+        case .voice(let url, let duration):
+            return StoredChatMessage(kind: "voice", text: "", mediaPath: relativeMediaPath(for: url), duration: duration, giftName: "", giftCount: 0, isMe: item.isMe, time: item.time)
+        case .image(_, let url):
+            return StoredChatMessage(kind: "image", text: "", mediaPath: relativeMediaPath(for: url), duration: 0, giftName: "", giftCount: 0, isMe: item.isMe, time: item.time)
+        case .video(let url, _):
+            return StoredChatMessage(kind: "video", text: "", mediaPath: relativeMediaPath(for: url), duration: 0, giftName: "", giftCount: 0, isMe: item.isMe, time: item.time)
         case .gift(let gift, let count):
-            return StoredChatMessage(kind: "gift", text: "", duration: 0, giftName: gift.name, giftCount: count, isMe: item.isMe, time: item.time)
+            return StoredChatMessage(kind: "gift", text: "", mediaPath: "", duration: 0, giftName: gift.name, giftCount: count, isMe: item.isMe, time: item.time)
         }
     }
 
@@ -683,11 +692,21 @@ class ChatViewController: UIViewController {
         let kind: ChatMessageKind
         switch stored.kind {
         case "voice":
-            kind = .voice(url: URL(fileURLWithPath: ""), duration: stored.duration)
+            let url = mediaURL(from: stored.mediaPath) ?? URL(fileURLWithPath: "")
+            kind = .voice(url: url, duration: stored.duration)
         case "image":
-            kind = .text("[Image]")
+            if let url = mediaURL(from: stored.mediaPath),
+               let image = UIImage(contentsOfFile: url.path) {
+                kind = .image(image, url: url)
+            } else {
+                kind = .text("[Image]")
+            }
         case "video":
-            kind = .text("[Video]")
+            if let url = mediaURL(from: stored.mediaPath) {
+                kind = .video(url: url, thumbnail: Self.makeVideoThumbnail(url: url))
+            } else {
+                kind = .text("[Video]")
+            }
         case "gift":
             let gift = allGifts.first { $0.name == stored.giftName } ?? allGifts[0]
             kind = .gift(gift, count: stored.giftCount)
@@ -695,6 +714,34 @@ class ChatViewController: UIViewController {
             kind = .text(stored.text)
         }
         return ChatMessageItem(kind: kind, isMe: stored.isMe, time: stored.time)
+    }
+
+    private func saveImageToMediaDirectory(_ image: UIImage) -> URL? {
+        let url = mediaDirectory.appendingPathComponent("image-\(UUID().uuidString).jpg")
+        guard let data = image.jpegData(compressionQuality: 0.88) else { return nil }
+        do {
+            try data.write(to: url, options: .atomic)
+            return url
+        } catch {
+            return nil
+        }
+    }
+
+    private func relativeMediaPath(for url: URL?) -> String {
+        guard let url else { return "" }
+        let directoryPath = mediaDirectory.path
+        if url.path.hasPrefix(directoryPath) {
+            return String(url.path.dropFirst(directoryPath.count + 1))
+        }
+        return url.path
+    }
+
+    private func mediaURL(from storedPath: String) -> URL? {
+        guard !storedPath.isEmpty else { return nil }
+        if storedPath.hasPrefix("/") {
+            return URL(fileURLWithPath: storedPath)
+        }
+        return mediaDirectory.appendingPathComponent(storedPath)
     }
 
     /// 滚动到底部
@@ -752,13 +799,19 @@ extension ChatViewController: PHPickerViewControllerDelegate {
             provider.loadObject(ofClass: UIImage.self) { [weak self] object, _ in
                 guard let image = object as? UIImage else { return }
                 DispatchQueue.main.async {
-                    self?.appendMessage(.image(image), isMe: true)
+                    guard let self else { return }
+                    if let url = self.saveImageToMediaDirectory(image) {
+                        self.appendMessage(.image(image, url: url), isMe: true)
+                    } else {
+                        self.showAlert(title: "Image failed", message: "Unable to save selected image.")
+                    }
                 }
             }
         } else if pickerType == 2, provider.hasItemConformingToTypeIdentifier("public.movie") {
             provider.loadFileRepresentation(forTypeIdentifier: "public.movie") { [weak self] url, _ in
                 guard let url else { return }
-                let destination = FileManager.default.temporaryDirectory.appendingPathComponent("video-\(UUID().uuidString).mov")
+                guard let self else { return }
+                let destination = self.mediaDirectory.appendingPathComponent("video-\(UUID().uuidString).mov")
                 do {
                     if FileManager.default.fileExists(atPath: destination.path) {
                         try FileManager.default.removeItem(at: destination)
@@ -766,11 +819,11 @@ extension ChatViewController: PHPickerViewControllerDelegate {
                     try FileManager.default.copyItem(at: url, to: destination)
                     let thumbnail = Self.makeVideoThumbnail(url: destination)
                     DispatchQueue.main.async {
-                        self?.appendMessage(.video(url: destination, thumbnail: thumbnail), isMe: true)
+                        self.appendMessage(.video(url: destination, thumbnail: thumbnail), isMe: true)
                     }
                 } catch {
                     DispatchQueue.main.async {
-                        self?.showAlert(title: "Video failed", message: error.localizedDescription)
+                        self.showAlert(title: "Video failed", message: error.localizedDescription)
                     }
                 }
             }
@@ -925,7 +978,7 @@ class ChatBubbleCell: UITableViewCell {
             addText(text, textColor: isMe ? Theme.Colors.darkerBackground : Theme.Colors.textPrimary)
         case .voice(let url, let duration):
             addVoice(url: url, duration: duration, textColor: isMe ? Theme.Colors.darkerBackground : Theme.Colors.textPrimary)
-        case .image(let image):
+        case .image(let image, _):
             addImage(image)
         case .video(let url, let thumbnail):
             addVideo(url: url, thumbnail: thumbnail, textColor: isMe ? Theme.Colors.darkerBackground : Theme.Colors.textPrimary)
