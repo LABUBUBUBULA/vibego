@@ -1,5 +1,4 @@
 import UIKit
-import StoreKit
 
 /// 充值页面 - 对应 Android GameMic 的 RechargeActivity
 /// 展示金币套餐列表，选择后模拟购买（Apple IAP 后续接入）
@@ -9,13 +8,7 @@ class RechargeViewController: UIViewController {
     // MARK: - 数据
 
     /// 充值套餐（对应 Android 的 5 个金币内购套餐）
-    private let packages: [(coins: Int, price: String, productId: String)] = [
-        (100, "$0.99", "com.vibego.coins100"),
-        (500, "$4.99", "com.vibego.coins500"),
-        (1000, "$9.99", "com.vibego.coins1000"),
-        (5000, "$49.99", "com.vibego.coins5000"),
-        (10000, "$99.99", "com.vibego.coins10000"),
-    ]
+    private let packages = CoinPurchaseManager.shared.packages
 
     /// 当前选中套餐索引
     private var selectedIndex: Int = 0
@@ -77,6 +70,7 @@ class RechargeViewController: UIViewController {
         super.viewDidLoad()
         title = "Recharge"
         view.backgroundColor = Theme.Colors.darkBackground
+        CoinPurchaseManager.shared.start()
         setupUI()
         updateBalance()
         buyButton.addTarget(self, action: #selector(buyTapped), for: .touchUpInside)
@@ -120,38 +114,15 @@ class RechargeViewController: UIViewController {
         buyButton.isEnabled = false
         buyButton.setTitle("Processing...", for: .normal)
 
-        Task {
+        Task { @MainActor in
             do {
-                let products = try await Product.products(for: [package.productId])
-                guard let product = products.first else {
-                    await showPurchaseResult(success: false, message: "Product not found", coins: 0)
-                    return
-                }
-
-                let result = try await product.purchase()
-                switch result {
-                case .success(let verification):
-                    switch verification {
-                    case .verified(let transaction):
-                        await transaction.finish()
-                        // 购买成功，加金币
-                        await MainActor.run {
-                            MockDataManager.shared.coinBalance += package.coins
-                            updateBalance()
-                        }
-                        await showPurchaseResult(success: true, message: "You received \(package.coins) coins!", coins: package.coins)
-                    case .unverified(_, let error):
-                        await showPurchaseResult(success: false, message: error.localizedDescription, coins: 0)
-                    }
-                case .pending:
-                    await showPurchaseResult(success: false, message: "Purchase pending approval", coins: 0)
-                case .userCancelled:
-                    await resetBuyButton()
-                @unknown default:
-                    await resetBuyButton()
-                }
+                let coins = try await CoinPurchaseManager.shared.purchase(package)
+                updateBalance()
+                showPurchaseResult(success: true, message: "You received \(coins) coins!", coins: coins)
+            } catch PurchaseError.cancelled {
+                resetBuyButton()
             } catch {
-                await showPurchaseResult(success: false, message: error.localizedDescription, coins: 0)
+                showPurchaseResult(success: false, message: error.localizedDescription, coins: 0)
             }
         }
     }
@@ -184,7 +155,7 @@ extension RechargeViewController: UICollectionViewDataSource, UICollectionViewDe
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: RechargeCell.reuseId, for: indexPath) as! RechargeCell
         let pkg = packages[indexPath.item]
-        cell.configure(coins: pkg.coins, price: pkg.price, isSelected: indexPath.item == selectedIndex)
+        cell.configure(coins: pkg.coins, price: pkg.fallbackPrice, isSelected: indexPath.item == selectedIndex)
         return cell
     }
 

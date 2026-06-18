@@ -6,6 +6,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         print("🟢 [App] didFinishLaunching")
         registerForPushNotifications(application)
+        Task { @MainActor in
+            CoinPurchaseManager.shared.start()
+        }
         return true
     }
 

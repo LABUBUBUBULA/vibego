@@ -74,7 +74,7 @@ final class MockDataManager {
     func resetSessionDataForAccountSwitch() {
         messages = loadMessages()
         browseHistoryRoomIds = loadBrowseHistoryRoomIds()
-        coinBalance = isPresetUser ? 12580 : 0
+        ensureCoinBalanceInitialized()
     }
 
     // MARK: - 语音房数据（对应 Android VoiceRoomRepository）
@@ -508,7 +508,36 @@ final class MockDataManager {
 
     // MARK: - 用户统计数据（对应 Android MineFragment）
 
-    lazy var coinBalance: Int = isPresetUser ? 12580 : 0
+    private func coinBalanceStorageKey() -> String {
+        "MockDataManager.coinBalance.\(currentAccountKey)"
+    }
+
+    private var defaultCoinBalance: Int {
+        isPresetUser ? 12580 : 0
+    }
+
+    private func ensureCoinBalanceInitialized() {
+        if UserDefaults.standard.object(forKey: coinBalanceStorageKey()) == nil {
+            UserDefaults.standard.set(defaultCoinBalance, forKey: coinBalanceStorageKey())
+        }
+    }
+
+    var coinBalance: Int {
+        get {
+            guard UserDefaults.standard.object(forKey: coinBalanceStorageKey()) != nil else {
+                return defaultCoinBalance
+            }
+            return UserDefaults.standard.integer(forKey: coinBalanceStorageKey())
+        }
+        set {
+            UserDefaults.standard.set(max(0, newValue), forKey: coinBalanceStorageKey())
+        }
+    }
+
+    func addCoins(_ amount: Int) {
+        guard amount > 0 else { return }
+        coinBalance = coinBalance + amount
+    }
 
     /// 固定粉丝：对应 Android 测试账号的 15 个粉丝（Android mock users index 0-14 = iOS index 1-15）
     private var fanUserIds: Set<Int> {
