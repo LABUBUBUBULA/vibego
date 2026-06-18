@@ -35,9 +35,9 @@ workflows:
         script: |
           cd $CM_BUILD_DIR
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.0" PlayTalk/Resources/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 1" PlayTalk/Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 2" PlayTalk/Resources/Info.plist
           echo "Using CFBundleShortVersionString=1.0.0"
-          echo "Using CFBundleVersion=1"
+          echo "Using CFBundleVersion=2"
 
       - name: Set up code signing
         script: |
