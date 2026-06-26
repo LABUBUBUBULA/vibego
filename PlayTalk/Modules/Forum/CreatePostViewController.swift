@@ -211,8 +211,15 @@ class CreatePostViewController: UIViewController {
 
     /// 发布帖子
     @objc private func publishTapped() {
-        guard let postTitle = titleField.text, !postTitle.isEmpty else {
+        let postTitle = titleField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let postContent = (contentTextView.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !postTitle.isEmpty else {
             showToast("Please enter a title")
+            return
+        }
+        let check = ModerationManager.shared.checkContent([postTitle, postContent])
+        guard check.isAllowed else {
+            showToast(check.userMessage)
             return
         }
         let user = UserManager.shared.currentUser ?? MockDataManager.shared.users[0]
@@ -224,7 +231,7 @@ class CreatePostViewController: UIViewController {
             authorAvatarUri: user.avatarUri,
             time: "Just now",
             title: postTitle,
-            content: contentTextView.text ?? "",
+            content: postContent,
             images: [],
             imageUris: selectedImages.map { $0.uri },
             viewCount: 0,

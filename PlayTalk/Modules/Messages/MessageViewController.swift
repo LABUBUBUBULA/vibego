@@ -7,7 +7,7 @@ class MessageViewController: UIViewController {
 
     // MARK: - 数据
 
-    private var messages = MockDataManager.shared.messages
+    private var messages: [Message] = []
 
     // MARK: - UI 组件
 
@@ -37,12 +37,30 @@ class MessageViewController: UIViewController {
         title = "Messages"
         view.backgroundColor = Theme.Colors.darkBackground
         setupUI()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(moderationDidChange),
+            name: ModerationManager.moderationDidChange,
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        messages = MockDataManager.shared.messages
+        reloadMessages()
+    }
+
+    private func reloadMessages() {
+        messages = MockDataManager.shared.messages.filter { ModerationManager.shared.shouldShow(message: $0) }
         messageTableView.reloadData()
+    }
+
+    @objc private func moderationDidChange() {
+        reloadMessages()
     }
 
     // MARK: - 界面搭建

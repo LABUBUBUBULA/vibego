@@ -169,6 +169,16 @@ class VoiceRoomViewController: UIViewController {
         setupActions()
         loadRoomData()
         loadInitialMessages()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(moderationDidChange),
+            name: ModerationManager.moderationDidChange,
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -498,10 +508,17 @@ class VoiceRoomViewController: UIViewController {
         }
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Send", style: .default) { [weak self] _ in
-            guard let text = alert.textFields?.first?.text, !text.isEmpty else { return }
+            guard let self,
+                  let text = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !text.isEmpty else { return }
+            let check = ModerationManager.shared.checkContent([text])
+            guard check.isAllowed else {
+                self.showToast(check.userMessage)
+                return
+            }
             let user = UserManager.shared.currentUser ?? MockDataManager.shared.users[0]
             let message = RoomMessage.createComment(sender: user, content: text)
-            self?.addMessage(message)
+            self.addMessage(message)
         })
         present(alert, animated: true)
     }
@@ -631,6 +648,14 @@ class VoiceRoomViewController: UIViewController {
             alert.addAction(UIAlertAction(title: "Send Gift", style: .default) { [weak self] _ in
                 self?.presentGiftSelector(receiverName: user.name)
             })
+
+            alert.addAction(UIAlertAction(title: "Report User", style: .default) { [weak self] _ in
+                self?.reportRoomUser(user)
+            })
+
+            alert.addAction(UIAlertAction(title: "Block User", style: .destructive) { [weak self] _ in
+                self?.confirmBlockRoomUser(user, seatIndex: seatIndex)
+            })
         }
 
         if isCurrentUserMic {
@@ -653,6 +678,49 @@ class VoiceRoomViewController: UIViewController {
         }
 
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        present(alert, animated: true)
+    }
+
+    private func reportRoomUser(_ user: User) {
+        ModerationManager.shared.submitReport(
+            targetType: .room,
+            targetId: room?.roomId ?? "",
+            targetUserId: user.id,
+            targetName: user.name,
+            reason: "Reported in voice room",
+            detail: "",
+            contentSnapshot: messages.compactMap { message in
+                guard message.senderName == user.name else { return nil }
+                return message.content
+            }.joined(separator: "\n")
+        )
+        showToast("Report submitted")
+    }
+
+    private func confirmBlockRoomUser(_ user: User, seatIndex: Int) {
+        let alert = UIAlertController(
+            title: "Block \(user.name)?",
+            message: "This will report the user, remove them from your room view, and hide their content immediately.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Block", style: .destructive) { [weak self] _ in
+            guard let self else { return }
+            ModerationManager.shared.blockUser(
+                userId: user.id,
+                name: user.name,
+                source: .room,
+                sourceId: self.room?.roomId ?? "",
+                reason: "Blocked in voice room",
+                contentSnapshot: self.messages.compactMap { message in
+                    guard message.senderName == user.name else { return nil }
+                    return message.content
+                }.joined(separator: "\n")
+            )
+            MockDataManager.shared.clearMessageSummary(userId: user.id)
+            self.removeBlockedUserFromRoom(userId: user.id)
+            self.showToast("User blocked")
+        })
         present(alert, animated: true)
     }
 
@@ -692,8 +760,8 @@ class VoiceRoomViewController: UIViewController {
 
         // Mock: 随机给几个麦位放人，避免重复占位
         let mockUsers = MockDataManager.shared.users
-        let shuffledUsers = mockUsers.dropFirst().shuffled()
-        for i in 0..<3 {
+        let shuffledUsers = mockUsers.dropFirst().filter { ModerationManager.shared.shouldShow(user: $0) }.shuffled()
+        for i in 0..<min(3, shuffledUsers.count) {
             micUsers[i] = shuffledUsers[i]
             updateMicSeatUI(at: i + 1)
         }
@@ -716,6 +784,11 @@ class VoiceRoomViewController: UIViewController {
 
     /// 添加新消息并滚动到底部
     private func addMessage(_ message: RoomMessage) {
+        if let senderName = message.senderName,
+           let user = MockDataManager.shared.users.first(where: { $0.name == senderName }),
+           ModerationManager.shared.isBlocked(userId: user.id) {
+            return
+        }
         messages.append(message)
         messageTableView.reloadData()
         // 滚动到底部
@@ -762,12 +835,48 @@ class VoiceRoomViewController: UIViewController {
         let seatView = micSeatViews[seatIndex]
 
         if let user = micUsers[micIndex] {
+            if ModerationManager.shared.isBlocked(userId: user.id) {
+                micUsers[micIndex] = nil
+                seatView.configure(avatarImage: "", username: "Mic \(seatIndex + 1)", isHost: false, isEmpty: true, isLocked: false)
+                return
+            }
             seatView.configure(avatarImage: user.avatarImage, username: user.name, isHost: false, isEmpty: false, isLocked: false)
         } else if micLockedStatus[micIndex] {
             seatView.configure(avatarImage: "", username: "Locked", isHost: false, isEmpty: true, isLocked: true)
         } else {
             seatView.configure(avatarImage: "", username: "Mic \(seatIndex + 1)", isHost: false, isEmpty: true, isLocked: false)
         }
+    }
+
+    @objc private func moderationDidChange() {
+        let blockedIds = micUsers.compactMap { user -> Int? in
+            guard let user, ModerationManager.shared.isBlocked(userId: user.id) else { return nil }
+            return user.id
+        }
+        blockedIds.forEach { removeBlockedUserFromRoom(userId: $0) }
+        messages.removeAll { message in
+            guard let senderName = message.senderName,
+                  let user = MockDataManager.shared.users.first(where: { $0.name == senderName }) else {
+                return false
+            }
+            return ModerationManager.shared.isBlocked(userId: user.id)
+        }
+        messageTableView.reloadData()
+    }
+
+    private func removeBlockedUserFromRoom(userId: Int) {
+        for index in micUsers.indices where micUsers[index]?.id == userId {
+            micUsers[index] = nil
+            updateMicSeatUI(at: index + 1)
+        }
+        messages.removeAll { message in
+            guard let senderName = message.senderName,
+                  let user = MockDataManager.shared.users.first(where: { $0.name == senderName }) else {
+                return false
+            }
+            return user.id == userId
+        }
+        messageTableView.reloadData()
     }
 }
 

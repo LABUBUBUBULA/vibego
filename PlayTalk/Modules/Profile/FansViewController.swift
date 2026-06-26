@@ -85,7 +85,7 @@ class FansViewController: UIViewController {
             users = MockDataManager.shared.getFriendUsers()
             emptyLabel.text = "No friends yet"
         case .visitors:
-            users = Array(MockDataManager.shared.users.suffix(10))
+            users = Array(MockDataManager.shared.users.suffix(10)).filter { ModerationManager.shared.shouldShow(user: $0) }
             emptyLabel.text = "No visitors yet"
         }
         emptyLabel.isHidden = !users.isEmpty

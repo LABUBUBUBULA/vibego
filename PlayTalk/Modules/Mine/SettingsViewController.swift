@@ -9,6 +9,7 @@ class SettingsViewController: UIViewController {
             "About VibeGo"
         ]),
         ("Account", [
+            "Blocked Users",
             "Delete Account"
         ])
     ]
@@ -27,6 +28,16 @@ class SettingsViewController: UIViewController {
         title = "Settings"
         view.backgroundColor = Theme.Colors.darkBackground
         setupUI()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(moderationDidChange),
+            name: ModerationManager.moderationDidChange,
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     private func setupUI() {
@@ -41,6 +52,10 @@ class SettingsViewController: UIViewController {
 
     private var appVersionText: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
+
+    @objc private func moderationDidChange() {
+        tableView.reloadData()
     }
 }
 
@@ -64,11 +79,18 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let title = sections[indexPath.section].items[indexPath.row]
-        let cell = UITableViewCell(style: title == "About VibeGo" ? .value1 : .default, reuseIdentifier: nil)
+        let usesDetailStyle = title == "About VibeGo" || title == "Blocked Users"
+        let cell = UITableViewCell(style: usesDetailStyle ? .value1 : .default, reuseIdentifier: nil)
         cell.textLabel?.text = title
         cell.textLabel?.textColor = title == "Delete Account" ? .systemRed : Theme.Colors.textPrimary
         cell.textLabel?.font = Theme.Fonts.regular(15)
-        cell.detailTextLabel?.text = title == "About VibeGo" ? appVersionText : nil
+        if title == "About VibeGo" {
+            cell.detailTextLabel?.text = appVersionText
+        } else if title == "Blocked Users" {
+            cell.detailTextLabel?.text = "\(ModerationManager.shared.blockedUsers().count)"
+        } else {
+            cell.detailTextLabel?.text = nil
+        }
         cell.detailTextLabel?.textColor = Theme.Colors.textSecondary
         cell.detailTextLabel?.font = Theme.Fonts.regular(15)
         cell.backgroundColor = Theme.Colors.cardBackground
@@ -87,6 +109,8 @@ extension SettingsViewController: UITableViewDataSource, UITableViewDelegate {
             pushAppViewController(LegalTextViewController(type: .privacy), animated: true)
         case "About VibeGo":
             pushAppViewController(LegalTextViewController(type: .about), animated: true)
+        case "Blocked Users":
+            pushAppViewController(BlockedUsersViewController(), animated: true)
         case "Delete Account":
             let alert = UIAlertController(
                 title: "Delete Account",

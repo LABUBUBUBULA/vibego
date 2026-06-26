@@ -155,7 +155,7 @@ class CustomerServiceViewController: UIViewController {
         case 4:
             return "For account issues:\n\n1. Try resetting your password\n2. Check if account is suspended\n3. Contact support with account ID and screenshots"
         case 5:
-            return "Join our team!\n\nAvailable positions:\n• Game Developers\n• UI/UX Designers\n• Community Managers\n• QA Testers\n\nSend your resume to: TorresNicole198@gmail.com"
+            return "Join our team!\n\nAvailable positions:\n• Game Developers\n• UI/UX Designers\n• Community Managers\n• QA Testers\n\nSend your resume to: mikealeen42@gmail.com"
         default:
             return "Thank you for your question. Our support team will get back to you soon."
         }

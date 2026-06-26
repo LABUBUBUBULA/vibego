@@ -142,6 +142,16 @@ class HomeViewController: UIViewController {
         setupUI()
         setupActions()
         loadData()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(moderationDidChange),
+            name: ModerationManager.moderationDidChange,
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -233,8 +243,14 @@ class HomeViewController: UIViewController {
         refreshControl.endRefreshing()
     }
 
+    @objc private func moderationDidChange() {
+        loadData()
+        updateMinimizedRoomFloat()
+    }
+
     private func updateMinimizedRoomFloat() {
-        guard let minimized = MockDataManager.shared.getMinimizedRoom() else {
+        guard let minimized = MockDataManager.shared.getMinimizedRoom(),
+              ModerationManager.shared.shouldShow(room: minimized.room) else {
             roomFloatView.isHidden = true
             return
         }
@@ -302,6 +318,11 @@ class HomeViewController: UIViewController {
     }
 
     private func openRoom(_ room: VoiceRoom, isOwner: Bool? = nil) {
+        guard ModerationManager.shared.shouldShow(room: room) else {
+            showToast("This room is unavailable")
+            loadData()
+            return
+        }
         // 有最小化房间且目标是不同的房间 → 弹确认
         if let minimized = MockDataManager.shared.getMinimizedRoom(),
            minimized.room.roomId != room.roomId {

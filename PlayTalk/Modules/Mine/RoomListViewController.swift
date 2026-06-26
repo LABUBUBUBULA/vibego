@@ -52,6 +52,16 @@ class RoomListViewController: UIViewController {
         view.backgroundColor = Theme.Colors.darkBackground
         setupUI()
         loadData()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(moderationDidChange),
+            name: ModerationManager.moderationDidChange,
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -88,7 +98,16 @@ class RoomListViewController: UIViewController {
         tableView.reloadData()
     }
 
+    @objc private func moderationDidChange() {
+        loadData()
+    }
+
     private func openRoom(_ room: VoiceRoom) {
+        guard ModerationManager.shared.shouldShow(room: room) else {
+            showToast("This room is unavailable")
+            loadData()
+            return
+        }
         // 与 Android 一致：列表项点击进入语音房；iOS mock 数据中已删除房间不会返回。
         MockDataManager.shared.addBrowseHistory(room)
         let vc = VoiceRoomViewController()

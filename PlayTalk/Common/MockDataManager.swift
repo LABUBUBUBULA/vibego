@@ -162,14 +162,15 @@ final class MockDataManager {
     /// 按分类筛选语音房（Popular 按热度排前10，用户创建房间排前面）
     func getRooms(for category: String) -> [VoiceRoom] {
         let allRooms = userCreatedRooms + voiceRooms
+        let moderation = ModerationManager.shared
         if category == "Popular" {
             let createdIds = Set(userCreatedRooms.map { $0.roomId })
             let sortedMockRooms = voiceRooms.sorted { $0.hotValue > $1.hotValue }
                 .prefix(10)
                 .filter { !createdIds.contains($0.roomId) }
-            return userCreatedRooms + sortedMockRooms
+            return (userCreatedRooms + sortedMockRooms).filter { moderation.shouldShow(room: $0) }
         }
-        return allRooms.filter { $0.gameTag == category }
+        return allRooms.filter { $0.gameTag == category && moderation.shouldShow(room: $0) }
     }
 
     func addUserCreatedRoom(_ room: VoiceRoom) {
@@ -239,7 +240,9 @@ final class MockDataManager {
     /// 我的收藏 - 对应 Android RoomCollectionManager.getCollections
     func getCollectedRooms() -> [VoiceRoom] {
         let ids = loadCollectedRoomIds()
-        return (userCreatedRooms + voiceRooms).filter { ids.contains($0.roomId) }
+        return (userCreatedRooms + voiceRooms).filter {
+            ids.contains($0.roomId) && ModerationManager.shared.shouldShow(room: $0)
+        }
     }
 
     /// 浏览记录 - 对应 Android BrowseHistoryManager，最新浏览排前，最多50条
@@ -269,6 +272,8 @@ final class MockDataManager {
     func getBrowseHistoryRooms() -> [VoiceRoom] {
         browseHistoryRoomIds.compactMap { roomId in
             (userCreatedRooms + voiceRooms).first { $0.roomId == roomId }
+        }.filter {
+            ModerationManager.shared.shouldShow(room: $0)
         }
     }
 
@@ -380,7 +385,7 @@ final class MockDataManager {
     }
 
     func getUserPosts(gameTag: String) -> [Post] {
-        userPosts.filter { $0.gameTag == gameTag }
+        userPosts.filter { $0.gameTag == gameTag && ModerationManager.shared.shouldShow(post: $0) }
     }
 
     // MARK: - 用户评论（持久化）
@@ -389,6 +394,7 @@ final class MockDataManager {
 
     struct UserComment: Codable {
         let postId: Int
+        let userId: Int?
         let userName: String
         let userAvatar: String
         let content: String
@@ -412,7 +418,13 @@ final class MockDataManager {
     }
 
     func getUserComments(postId: Int) -> [UserComment] {
-        userComments.filter { $0.postId == postId }
+        userComments.filter {
+            guard $0.postId == postId else { return false }
+            if let userId = $0.userId {
+                return !ModerationManager.shared.isBlocked(userId: userId)
+            }
+            return true
+        }
     }
 
     // MARK: - 消息数据
@@ -429,7 +441,7 @@ final class MockDataManager {
     private func loadMessages() -> [Message] {
         if let data = UserDefaults.standard.data(forKey: messagesStorageKey()),
            let saved = try? JSONDecoder().decode([Message].self, from: data) {
-            return saved
+            return saved.filter { ModerationManager.shared.shouldShow(message: $0) }
         }
         guard isPresetUser else { return [] }
         // 无持久化数据 → 使用预设值
@@ -463,7 +475,7 @@ final class MockDataManager {
         if let data = try? JSONEncoder().encode(defaults) {
             UserDefaults.standard.set(data, forKey: messagesStorageKey())
         }
-        return defaults
+        return defaults.filter { ModerationManager.shared.shouldShow(message: $0) }
     }
 
     private func saveMessages() {
@@ -483,6 +495,7 @@ final class MockDataManager {
     }
 
     func updateMessageSummary(userId: Int, lastMessage: String, time: String, timestamp: TimeInterval) {
+        guard !ModerationManager.shared.isBlocked(userId: userId) else { return }
         if let index = messages.firstIndex(where: { $0.userId == userId }) {
             messages[index].lastMessage = lastMessage
             messages[index].time = time
@@ -546,17 +559,17 @@ final class MockDataManager {
 
     func getFansUsers() -> [User] {
         guard isPresetUser else { return [] }
-        return users.filter { fanUserIds.contains($0.id) }
+        return users.filter { fanUserIds.contains($0.id) && ModerationManager.shared.shouldShow(user: $0) }
     }
 
     func getFollowingUsers() -> [User] {
         guard isPresetUser else { return [] }
-        return users.filter { $0.isFollowing && $0.id != currentUser.id }
+        return users.filter { $0.isFollowing && $0.id != currentUser.id && ModerationManager.shared.shouldShow(user: $0) }
     }
 
     func getFriendUsers() -> [User] {
         guard isPresetUser else { return [] }
-        return users.filter { $0.isFollowing && fanUserIds.contains($0.id) && $0.id != currentUser.id }
+        return users.filter { $0.isFollowing && fanUserIds.contains($0.id) && $0.id != currentUser.id && ModerationManager.shared.shouldShow(user: $0) }
     }
 
     var fansCount: Int { getFansUsers().count }

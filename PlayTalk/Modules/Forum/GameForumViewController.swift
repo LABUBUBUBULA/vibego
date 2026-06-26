@@ -60,6 +60,16 @@ class GameForumViewController: UIViewController {
 
         setupUI()
         loadPosts()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(moderationDidChange),
+            name: ModerationManager.moderationDidChange,
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     private func setupUI() {
@@ -117,11 +127,17 @@ class GameForumViewController: UIViewController {
                 isFollowing: MockDataManager.shared.isFollowing(userId: user.id),
                 gameTag: gameName
             )
+        }.filter {
+            ModerationManager.shared.shouldShow(post: $0)
         }
         // 用户发布的帖子排前面
         let savedUserPosts = MockDataManager.shared.getUserPosts(gameTag: gameName)
-        posts = savedUserPosts + mockPosts
+        posts = (savedUserPosts + mockPosts).filter { ModerationManager.shared.shouldShow(post: $0) }
         tableView.reloadData()
+    }
+
+    @objc private func moderationDidChange() {
+        loadPosts()
     }
 
     /// 发帖按钮
@@ -130,6 +146,7 @@ class GameForumViewController: UIViewController {
         vc.gameTag = gameName
         vc.onPostCreated = { [weak self] newPost in
             guard let self else { return }
+            guard ModerationManager.shared.shouldShow(post: newPost) else { return }
             self.posts.insert(newPost, at: 0)
             self.tableView.reloadData()
         }
@@ -160,8 +177,14 @@ extension GameForumViewController: UITableViewDataSource, UITableViewDelegate {
         vc.post = posts[indexPath.row]
         vc.onPostUpdated = { [weak self] updatedPost in
             guard let self else { return }
-            self.posts[indexPath.row] = updatedPost
-            self.tableView.reloadRows(at: [indexPath], with: .none)
+            guard let postIndex = self.posts.firstIndex(where: { $0.id == updatedPost.id }) else { return }
+            guard ModerationManager.shared.shouldShow(post: updatedPost) else {
+                self.posts.remove(at: postIndex)
+                self.tableView.reloadData()
+                return
+            }
+            self.posts[postIndex] = updatedPost
+            self.tableView.reloadRows(at: [IndexPath(row: postIndex, section: 0)], with: .none)
         }
         vc.onPostDeleted = { [weak self] postId in
             guard let self else { return }

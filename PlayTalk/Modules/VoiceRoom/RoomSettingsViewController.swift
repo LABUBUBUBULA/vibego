@@ -224,9 +224,15 @@ final class RoomSettingsViewController: UIViewController {
             return
         }
         guard var updatedRoom = room else { return }
+        let intro = introField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? updatedRoom.description
+        let check = ModerationManager.shared.checkContent([name, intro])
+        guard check.isAllowed else {
+            showToast(check.userMessage)
+            return
+        }
         updatedRoom.roomName = name
         updatedRoom.title = name
-        updatedRoom.description = introField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? updatedRoom.description
+        updatedRoom.description = intro
         room = updatedRoom
         MockDataManager.shared.updateUserCreatedRoom(updatedRoom)
         onRoomUpdated?(updatedRoom)

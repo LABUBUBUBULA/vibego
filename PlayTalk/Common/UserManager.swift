@@ -83,7 +83,7 @@ final class UserManager {
     ///   - password: 密码（至少6位）
     /// - Returns: 注册成功返回用户ID，失败返回nil
     func registerWithEmail(_ email: String, _ password: String) -> Int? {
-        let normalizedEmail = email.lowercased()
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if deletedEmails.contains(normalizedEmail) || registeredEmails[normalizedEmail] != nil {
             return nil
         }
@@ -102,7 +102,7 @@ final class UserManager {
 
     /// 检查邮箱是否已注册
     func isEmailRegistered(_ email: String) -> Bool {
-        let normalizedEmail = email.lowercased()
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return !deletedEmails.contains(normalizedEmail) && (registeredEmails[normalizedEmail] != nil || presetAccounts[normalizedEmail] != nil)
     }
 
@@ -114,20 +114,22 @@ final class UserManager {
     ///   - password: 密码
     /// - Returns: 登录成功返回true
     func loginWithEmail(_ email: String, _ password: String) -> Bool {
-        let normalizedEmail = email.lowercased()
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
+
         guard !deletedEmails.contains(normalizedEmail) else { return false }
 
         if let preset = presetAccounts[normalizedEmail] {
-            guard preset.password == password else { return false }
+            guard preset.password == normalizedPassword else { return false }
             currentUser = MockDataManager.shared.users[preset.userIndex]
-            currentUserEmail = nil
+            currentUserEmail = normalizedEmail
             isLoggedIn = true
             saveLocalState()
             MockDataManager.shared.resetSessionDataForAccountSwitch()
             return true
         }
 
-        guard let storedPassword = registeredEmails[normalizedEmail], storedPassword == password else {
+        guard let storedPassword = registeredEmails[normalizedEmail], storedPassword == normalizedPassword else {
             return false
         }
 
@@ -155,7 +157,7 @@ final class UserManager {
     ///   - newPassword: 新密码
     /// - Returns: 重置成功返回true
     func resetPassword(_ email: String, _ newPassword: String) -> Bool {
-        let normalizedEmail = email.lowercased()
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !deletedEmails.contains(normalizedEmail), registeredEmails[normalizedEmail] != nil else {
             return false
         }
@@ -187,7 +189,7 @@ final class UserManager {
         }
         currentUser = user
         isLoggedIn = true
-        if let email = currentUserEmail {
+        if let email = currentUserEmail, presetAccounts[email] == nil {
             registeredProfiles[email] = user
             saveRegisteredData()
         }
@@ -217,14 +219,12 @@ final class UserManager {
 
     /// 删除当前账号，删除后邮箱不能重新登录或注册
     func deleteCurrentAccount() {
-        if let email = currentUserEmail?.lowercased() {
+        if let email = currentUserEmail?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), !email.isEmpty {
             deletedEmails.insert(email)
-            registeredEmails.removeValue(forKey: email)
-            registeredProfiles.removeValue(forKey: email)
-            saveRegisteredData()
-        } else {
-            deletedEmails.insert("vibego@gmail.com")
-            deletedEmails.insert("gamemic@gmail.com")
+            if presetAccounts[email] == nil {
+                registeredEmails.removeValue(forKey: email)
+                registeredProfiles.removeValue(forKey: email)
+            }
             saveRegisteredData()
         }
         logout()

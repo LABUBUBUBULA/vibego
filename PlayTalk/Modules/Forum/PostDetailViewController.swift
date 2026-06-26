@@ -123,8 +123,48 @@ class PostDetailViewController: UIViewController {
             }
             present(alert, animated: true)
         } else {
-            showReportSheet()
+            let authorName = post?.authorName ?? "Author"
+            let alert = UIAlertController(title: authorName, message: nil, preferredStyle: .actionSheet)
+            alert.addAction(UIAlertAction(title: "Report Post", style: .default) { [weak self] _ in
+                self?.showReportSheet()
+            })
+            alert.addAction(UIAlertAction(title: "Block User", style: .destructive) { [weak self] _ in
+                self?.confirmBlockPostAuthor()
+            })
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            if let popover = alert.popoverPresentationController {
+                popover.barButtonItem = navigationItem.rightBarButtonItem
+            }
+            present(alert, animated: true)
         }
+    }
+
+    private func confirmBlockPostAuthor() {
+        guard let post,
+              let authorId = Int(post.authorId) else { return }
+        let alert = UIAlertController(
+            title: "Block \(post.authorName)?",
+            message: "This will report the user, hide this post immediately, and remove their content from your feed.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Block", style: .destructive) { [weak self] _ in
+            guard let self, let post = self.post else { return }
+            ModerationManager.shared.hidePost(id: post.id)
+            ModerationManager.shared.blockUser(
+                userId: authorId,
+                name: post.authorName,
+                source: .post,
+                sourceId: "\(post.id)",
+                reason: "Blocked from post",
+                contentSnapshot: "\(post.title)\n\(post.content)"
+            )
+            MockDataManager.shared.clearMessageSummary(userId: authorId)
+            self.onPostDeleted?(post.id)
+            self.showToast("User blocked")
+            self.navigationController?.popViewController(animated: true)
+        })
+        present(alert, animated: true)
     }
 
     private func showReportSheet() {
@@ -158,13 +198,28 @@ class PostDetailViewController: UIViewController {
         }
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Submit", style: .destructive) { [weak self, weak alert] _ in
+            guard let self, let post = self.post else { return }
             let detail = alert?.textFields?.first?.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let message = detail.isEmpty
-                ? "Thanks. We will review this post."
-                : "Thanks. We will review this post and your details."
-            let done = UIAlertController(title: "Report submitted", message: message, preferredStyle: .alert)
-            done.addAction(UIAlertAction(title: "OK", style: .default))
-            self?.present(done, animated: true)
+            ModerationManager.shared.submitReport(
+                targetType: .post,
+                targetId: "\(post.id)",
+                targetUserId: Int(post.authorId),
+                targetName: post.authorName,
+                reason: reason,
+                detail: detail,
+                contentSnapshot: "\(post.title)\n\(post.content)"
+            )
+            ModerationManager.shared.hidePost(id: post.id)
+            self.onPostDeleted?(post.id)
+            let done = UIAlertController(
+                title: "Report submitted",
+                message: "Thanks. This post was removed from your feed immediately and will be reviewed within 24 hours.",
+                preferredStyle: .alert
+            )
+            done.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
+                self?.navigationController?.popViewController(animated: true)
+            })
+            self.present(done, animated: true)
         })
         present(alert, animated: true)
     }
@@ -241,7 +296,12 @@ class PostDetailViewController: UIViewController {
         }
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Post", style: .default) { [weak self] _ in
-            guard let self, let text = alert.textFields?.first?.text, !text.isEmpty else { return }
+            guard let self, let text = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { return }
+            let check = ModerationManager.shared.checkContent([text])
+            guard check.isAllowed else {
+                self.showToast(check.userMessage)
+                return
+            }
             let user = UserManager.shared.currentUser ?? MockDataManager.shared.users[0]
             self.comments.insert((user: user, content: text, time: "Just now"), at: 0)
             self.post?.commentCount = self.comments.count
@@ -250,6 +310,7 @@ class PostDetailViewController: UIViewController {
             if let postId = self.post?.id {
                 let comment = MockDataManager.UserComment(
                     postId: postId,
+                    userId: user.id,
                     userName: user.name,
                     userAvatar: user.displayAvatar,
                     content: text,
@@ -272,7 +333,8 @@ class PostDetailViewController: UIViewController {
         var savedComments: [(user: User, content: String, time: String)] = []
         if let postId = post?.id {
             savedComments = MockDataManager.shared.getUserComments(postId: postId).map { c in
-                let user = allUsers.first { $0.name == c.userName }
+                let user = c.userId.flatMap { MockDataManager.shared.user(withId: $0) }
+                    ?? allUsers.first { $0.name == c.userName }
                     ?? UserManager.shared.currentUser
                     ?? allUsers[0]
                 return (user: user, content: c.content, time: c.time)
@@ -299,6 +361,8 @@ class PostDetailViewController: UIViewController {
             (user: allUsers[(i + 3) % allUsers.count],
              content: commentTexts[i],
              time: "\(Int.random(in: 1...24))h ago")
+        }.filter {
+            ModerationManager.shared.shouldShow(user: $0.user)
         }
         comments = savedComments + mockComments
         post?.commentCount = comments.count
@@ -337,6 +401,49 @@ extension PostDetailViewController: UITableViewDataSource, UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, estimatedHeightForRowAt indexPath: IndexPath) -> CGFloat {
         return indexPath.section == 0 ? 200 : 80
+    }
+
+    func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
+        guard indexPath.section == 1, comments.indices.contains(indexPath.row) else { return nil }
+        let comment = comments[indexPath.row]
+        let currentUserId = UserManager.shared.currentUser?.id ?? MockDataManager.shared.users[0].id
+        guard comment.user.id != currentUserId else { return nil }
+
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            let report = UIAction(title: "Report Comment", image: UIImage(systemName: "flag")) { _ in
+                guard let self else { return }
+                ModerationManager.shared.submitReport(
+                    targetType: .comment,
+                    targetId: "\(self.post?.id ?? 0):\(indexPath.row)",
+                    targetUserId: comment.user.id,
+                    targetName: comment.user.name,
+                    reason: "Reported comment",
+                    detail: "",
+                    contentSnapshot: comment.content
+                )
+                self.comments.remove(at: indexPath.row)
+                self.post?.commentCount = self.comments.count
+                tableView.deleteRows(at: [indexPath], with: .automatic)
+                self.showToast("Comment reported")
+            }
+            let block = UIAction(title: "Block User", image: UIImage(systemName: "hand.raised.fill"), attributes: .destructive) { [weak self] _ in
+                guard let self else { return }
+                ModerationManager.shared.blockUser(
+                    userId: comment.user.id,
+                    name: comment.user.name,
+                    source: .comment,
+                    sourceId: "\(self.post?.id ?? 0):\(indexPath.row)",
+                    reason: "Blocked from comment",
+                    contentSnapshot: comment.content
+                )
+                MockDataManager.shared.clearMessageSummary(userId: comment.user.id)
+                self.comments.removeAll { $0.user.id == comment.user.id }
+                self.post?.commentCount = self.comments.count
+                tableView.reloadData()
+                self.showToast("User blocked")
+            }
+            return UIMenu(children: [report, block])
+        }
     }
 
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {

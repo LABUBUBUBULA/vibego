@@ -30,6 +30,7 @@ targets:
         excludes:
           - Info.plist
           - VibeGo.entitlements
+          - Test.storekit
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.vibegolive.app

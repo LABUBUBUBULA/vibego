@@ -5,6 +5,7 @@ class UserProfileViewController: UIViewController {
 
     var user: User?
     private var primaryActionButton: UIButton?
+    private var chatActionButton: UIButton?
 
     private let profileBackgroundColor = Theme.Colors.profileBackground
 
@@ -155,11 +156,25 @@ class UserProfileViewController: UIViewController {
         backButton.translatesAutoresizingMaskIntoConstraints = false
         header.addSubview(backButton)
 
+        let moreButton = UIButton(type: .system)
+        moreButton.setImage(UIImage(systemName: "ellipsis"), for: .normal)
+        moreButton.tintColor = .white
+        moreButton.contentHorizontalAlignment = .right
+        moreButton.isHidden = user.id == UserManager.shared.currentUser?.id
+        moreButton.addTarget(self, action: #selector(moreTapped), for: .touchUpInside)
+        moreButton.translatesAutoresizingMaskIntoConstraints = false
+        header.addSubview(moreButton)
+
         NSLayoutConstraint.activate([
             backButton.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: 22),
             backButton.topAnchor.constraint(equalTo: header.topAnchor, constant: 56),
             backButton.widthAnchor.constraint(equalToConstant: 40),
-            backButton.heightAnchor.constraint(equalToConstant: 40)
+            backButton.heightAnchor.constraint(equalToConstant: 40),
+
+            moreButton.trailingAnchor.constraint(equalTo: header.trailingAnchor, constant: -22),
+            moreButton.topAnchor.constraint(equalTo: header.topAnchor, constant: 56),
+            moreButton.widthAnchor.constraint(equalToConstant: 40),
+            moreButton.heightAnchor.constraint(equalToConstant: 40)
         ])
 
         return header
@@ -271,6 +286,7 @@ class UserProfileViewController: UIViewController {
         chat.backgroundColor = Theme.Colors.cardBackground
         chat.layer.cornerRadius = 21
         chat.addTarget(self, action: #selector(chatTapped), for: .touchUpInside)
+        chatActionButton = chat
 
         stack.addArrangedSubview(primary)
         stack.addArrangedSubview(chat)
@@ -441,6 +457,7 @@ class UserProfileViewController: UIViewController {
         if let primaryActionButton {
             updatePrimaryActionButton(primaryActionButton, for: syncedUser)
         }
+        updateChatActionButton(for: syncedUser)
     }
 
     private func updatePrimaryActionButton(_ button: UIButton, for user: User) {
@@ -449,6 +466,79 @@ class UserProfileViewController: UIViewController {
         button.setTitle(isCurrentUser ? "Edit Profile" : (isFollowing ? "Following" : "Follow"), for: .normal)
         button.setTitleColor(isCurrentUser ? .black : .white, for: .normal)
         button.backgroundColor = isCurrentUser ? Theme.Colors.primaryPurple : (isFollowing ? Theme.Colors.textFieldBorder : Theme.Colors.primaryPurple)
+    }
+
+    private func updateChatActionButton(for user: User) {
+        guard let chatActionButton else { return }
+        let isCurrentUser = user.id == UserManager.shared.currentUser?.id
+        let isBlocked = ModerationManager.shared.isBlocked(userId: user.id)
+        chatActionButton.isEnabled = isCurrentUser || !isBlocked
+        chatActionButton.alpha = isBlocked && !isCurrentUser ? 0.45 : 1
+        chatActionButton.setTitle(isBlocked && !isCurrentUser ? "Blocked" : (isCurrentUser ? "My Chat" : "Chat"), for: .normal)
+    }
+
+    @objc private func moreTapped() {
+        guard let user else { return }
+        let currentUserId = UserManager.shared.currentUser?.id ?? MockDataManager.shared.users[0].id
+        guard user.id != currentUserId else { return }
+
+        let isBlocked = ModerationManager.shared.isBlocked(userId: user.id)
+        let alert = UIAlertController(title: user.name, message: nil, preferredStyle: .actionSheet)
+        alert.addAction(UIAlertAction(title: isBlocked ? "Unblock User" : "Block User", style: isBlocked ? .default : .destructive) { [weak self] _ in
+            guard let self else { return }
+            if isBlocked {
+                ModerationManager.shared.unblockUser(userId: user.id)
+                self.refreshUserState()
+                self.showToast("User unblocked")
+            } else {
+                self.confirmBlockUser(user)
+            }
+        })
+        alert.addAction(UIAlertAction(title: "Report User", style: .default) { [weak self] _ in
+            self?.reportUser(user)
+        })
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = view
+            popover.sourceRect = CGRect(x: view.bounds.maxX - 44, y: view.safeAreaInsets.top + 56, width: 1, height: 1)
+        }
+        present(alert, animated: true)
+    }
+
+    private func confirmBlockUser(_ user: User) {
+        let alert = UIAlertController(
+            title: "Block \(user.name)?",
+            message: "This will report the user and remove their content from your feed immediately.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Block", style: .destructive) { [weak self] _ in
+            ModerationManager.shared.blockUser(
+                userId: user.id,
+                name: user.name,
+                source: .user,
+                sourceId: "\(user.id)",
+                reason: "Blocked from profile",
+                contentSnapshot: user.bio
+            )
+            MockDataManager.shared.clearMessageSummary(userId: user.id)
+            self?.refreshUserState()
+            self?.showToast("User blocked")
+        })
+        present(alert, animated: true)
+    }
+
+    private func reportUser(_ user: User) {
+        ModerationManager.shared.submitReport(
+            targetType: .user,
+            targetId: "\(user.id)",
+            targetUserId: user.id,
+            targetName: user.name,
+            reason: "Reported profile",
+            detail: "",
+            contentSnapshot: user.bio
+        )
+        showToast("Report submitted")
     }
 
     @objc private func editProfileTapped() {
@@ -465,6 +555,10 @@ class UserProfileViewController: UIViewController {
 
     @objc private func chatTapped() {
         guard let user else { return }
+        if ModerationManager.shared.isBlocked(userId: user.id) {
+            showToast("This user is blocked")
+            return
+        }
         let vc = ChatViewController()
         vc.chatUser = Message(
             userId: user.id,

@@ -328,7 +328,12 @@ class CreateRoomViewController: UIViewController {
         // 生成6位房间ID（对应 Android 100000-999999 随机）
         let roomId = "\(Int.random(in: 100000...999999))"
         let user = UserManager.shared.currentUser ?? MockDataManager.shared.users[0]
-        let profileText = roomProfileField.text ?? ""
+        let profileText = (roomProfileField.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let check = ModerationManager.shared.checkContent([roomName, profileText])
+        guard check.isAllowed else {
+            showToast(check.userMessage)
+            return
+        }
 
         // 创建房间数据
         let room = VoiceRoom(

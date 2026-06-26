@@ -152,6 +152,7 @@ class ChatViewController: UIViewController {
         setupActions()
         setupKeyboardObservers()
         loadMockMessages()
+        applyBlockedStateIfNeeded()
     }
 
     deinit {
@@ -345,11 +346,62 @@ class ChatViewController: UIViewController {
         alert.addAction(UIAlertAction(title: "Report", style: .default) { [weak self] _ in
             self?.showReportSheet()
         })
+        if let userId = chatUser?.userId, !ModerationManager.shared.isBlocked(userId: userId) {
+            alert.addAction(UIAlertAction(title: "Block User", style: .destructive) { [weak self] _ in
+                self?.confirmBlockUser()
+            })
+        }
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         if let popover = alert.popoverPresentationController {
             popover.barButtonItem = navigationItem.rightBarButtonItem
         }
         present(alert, animated: true)
+    }
+
+    private func confirmBlockUser() {
+        guard let chatUser else { return }
+        let alert = UIAlertController(
+            title: "Block \(chatUser.name)?",
+            message: "This will report the user, remove their messages from your feed immediately, and prevent new messages from this user.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Block", style: .destructive) { [weak self] _ in
+            self?.blockCurrentChatUser(reason: "Blocked from chat", detail: "")
+        })
+        present(alert, animated: true)
+    }
+
+    private func blockCurrentChatUser(reason: String, detail: String) {
+        guard let chatUser else { return }
+        let snapshot = chatMessages.map { previewText(for: $0.kind) }.joined(separator: "\n")
+        ModerationManager.shared.blockUser(
+            userId: chatUser.userId,
+            name: chatUser.name,
+            source: .chat,
+            sourceId: "\(chatUser.userId)",
+            reason: reason,
+            detail: detail,
+            contentSnapshot: snapshot
+        )
+        MockDataManager.shared.clearMessageSummary(userId: chatUser.userId)
+        chatMessages.removeAll()
+        saveMessages()
+        tableView.reloadData()
+        applyBlockedStateIfNeeded()
+        showAlert(title: "User blocked", message: "\(chatUser.name) was reported and removed from your messages.")
+    }
+
+    private func applyBlockedStateIfNeeded() {
+        guard let userId = chatUser?.userId,
+              ModerationManager.shared.isBlocked(userId: userId) else { return }
+        inputField.text = ""
+        inputField.placeholder = "User blocked"
+        inputField.isEnabled = false
+        sendButton.isEnabled = false
+        sendButton.alpha = 0.35
+        functionStack.isUserInteractionEnabled = false
+        functionStack.alpha = 0.35
     }
 
     private func confirmDeleteChat() {
@@ -413,9 +465,18 @@ class ChatViewController: UIViewController {
 
     private func submitReport(reason: String, detail: String) {
         let userName = chatUser?.name ?? "User"
-        let message = detail.isEmpty
-            ? "Thanks. We will review \(userName)'s recent chat activity."
-            : "Thanks. We will review \(userName)'s recent chat activity and your details."
+        if let chatUser {
+            ModerationManager.shared.submitReport(
+                targetType: .chat,
+                targetId: "\(chatUser.userId)",
+                targetUserId: chatUser.userId,
+                targetName: chatUser.name,
+                reason: reason,
+                detail: detail,
+                contentSnapshot: chatMessages.map { previewText(for: $0.kind) }.joined(separator: "\n")
+            )
+        }
+        let message = "Thanks. We will review \(userName)'s recent chat activity within 24 hours."
         selectedReportReason = reason
         showAlert(title: "Report submitted", message: message)
     }
@@ -600,7 +661,16 @@ class ChatViewController: UIViewController {
 
     /// 发送文本消息
     @objc private func sendTapped() {
+        if let userId = chatUser?.userId, ModerationManager.shared.isBlocked(userId: userId) {
+            showToast("This user is blocked")
+            return
+        }
         guard let text = inputField.text?.trimmingCharacters(in: .whitespaces), !text.isEmpty else { return }
+        let check = ModerationManager.shared.checkContent([text])
+        guard check.isAllowed else {
+            showToast(check.userMessage)
+            return
+        }
         inputField.text = ""
         appendMessage(.text(text), isMe: true)
     }
