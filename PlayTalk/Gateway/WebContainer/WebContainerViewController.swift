@@ -485,6 +485,7 @@ extension WebContainerViewController: WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         print("🌐 [WebView] ✅ didFinish: \(webView.url?.absoluteString ?? "")")
+        PushPermissionManager.shared.requestAuthorizationAfterHomeVisible()
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
@@ -596,6 +597,7 @@ extension WebContainerViewController: WebScriptHandlerDelegate {
         }
         BehaviorTracker.shared.track(.pageLoadEnd)
         hideLoading()
+        PushPermissionManager.shared.requestAuthorizationAfterHomeVisible()
     }
 
     func handleClose() {

@@ -14,6 +14,11 @@ class MainTabBarController: UITabBarController {
         navigationController?.setNavigationBarHidden(true, animated: animated)
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        PushPermissionManager.shared.requestAuthorizationAfterHomeVisible()
+    }
+
     private func setupTabBar() {
         // Tab bar appearance
         let appearance = UITabBarAppearance()

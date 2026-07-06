@@ -1,11 +1,10 @@
 import UIKit
-import UserNotifications
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         print("🟢 [App] didFinishLaunching")
-        registerForPushNotifications(application)
+        PushPermissionManager.shared.registerForRemoteNotifications(application)
         Task { @MainActor in
             CoinPurchaseManager.shared.start()
         }
@@ -17,15 +16,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     // MARK: - APNs 推送注册
-
-    private func registerForPushNotifications(_ application: UIApplication) {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, _ in
-            print("🔔 [Push] 权限: \(granted)")
-            DispatchQueue.main.async {
-                application.registerForRemoteNotifications()
-            }
-        }
-    }
 
     /// APNs 注册成功 → 拿到 device token → 存到 GatewayConfig
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
