@@ -558,9 +558,9 @@ extension WebContainerViewController: WKUIDelegate {
 
 extension WebContainerViewController: WebScriptHandlerDelegate {
 
-    func handleRechargePay(batchNo: String, callbackJson: String) {
+    func handleRechargePay(batchNo: String, callbackResult: String) {
         // 发起 iOS 内购
-        PurchaseManager.shared.purchase(batchNo: batchNo, callbackJson: callbackJson, from: self)
+        PurchaseManager.shared.purchase(batchNo: batchNo, callbackResult: callbackResult, from: self)
     }
 
     func handleOpenBrowser(type: String, url: String) {

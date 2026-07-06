@@ -11,7 +11,7 @@ final class PurchaseManager: NSObject {
         super.init()
     }
 
-    private var currentCallbackJson: String = ""
+    private var currentCallbackResult: String = ""
     private var currentBatchNo: String = ""
     private weak var presentingVC: WebContainerViewController?
     private var loadingView: UIView?
@@ -19,7 +19,7 @@ final class PurchaseManager: NSObject {
 
     // MARK: - 发起购买
 
-    func purchase(batchNo: String, callbackJson: String, from vc: WebContainerViewController) {
+    func purchase(batchNo: String, callbackResult: String, from vc: WebContainerViewController) {
         // 防重复购买
         guard !isPurchasing else {
             print("�� [Purchase] ⚠️ 正在购买中，忽略重复请求")
@@ -28,7 +28,7 @@ final class PurchaseManager: NSObject {
         isPurchasing = true
 
         print("💰 [Purchase] 开始购买")
-        currentCallbackJson = callbackJson
+        currentCallbackResult = callbackResult
         currentBatchNo = batchNo
         presentingVC = vc
 
@@ -58,7 +58,7 @@ final class PurchaseManager: NSObject {
                             verifyPurchase(
                                 transactionId: String(transaction.id),
                                 receipt: transaction.jsonRepresentation,
-                                callbackJson: callbackJson
+                                callbackResult: callbackResult
                             )
                         }
                     case .unverified(_, let error):
@@ -90,14 +90,14 @@ final class PurchaseManager: NSObject {
     // MARK: - 验单接口
 
     /// 验单接口
-    /// 参数通配符：t → transactionId, p → payload, c → callbackResult
-    private func verifyPurchase(transactionId: String, receipt: Data, callbackJson: String) {
+    /// 参数通配符：t → 交易ID, p → 验单凭据, c → 前端回调JSON
+    private func verifyPurchase(transactionId: String, receipt: Data, callbackResult: String) {
         let payload = receipt.base64EncodedString()
 
         let params: [String: Any] = [
             "trt": transactionId,                // 末尾 t
             "plp": payload,                      // 末尾 p
-            "cbc": callbackJson                  // 末尾 c
+            "cbc": callbackResult                // 末尾 c
         ]
 
         print("💰 [Purchase] 验单请求: transactionId=\(transactionId)")

@@ -1,9 +1,10 @@
+import Foundation
 import WebKit
 import AVFoundation
 
 /// JS Bridge 消息回调协议
 protocol WebScriptHandlerDelegate: AnyObject {
-    func handleRechargePay(batchNo: String, callbackJson: String)
+    func handleRechargePay(batchNo: String, callbackResult: String)
     func handleOpenBrowser(type: String, url: String)
     func handlePageLoaded()
     func handleClose()
@@ -30,13 +31,12 @@ class WebScriptHandler: NSObject, WKScriptMessageHandler {
             // 支付消息
             if let body = message.body as? [String: Any] {
                 let batchNo = body[ObfuscatedBridgeText.Field.f0] as? String ?? ""
-                let callbackJson = body[ObfuscatedBridgeText.Field.f1] as? String
-                    ?? body[ObfuscatedBridgeText.Field.f2] as? String ?? ""
+                let callbackResult = parseCallbackResult(from: body)
                 print("🔌 [JSBridge] payment message parsed")
-                delegate?.handleRechargePay(batchNo: batchNo, callbackJson: callbackJson)
+                delegate?.handleRechargePay(batchNo: batchNo, callbackResult: callbackResult)
             } else if let batchNo = message.body as? String {
                 print("🔌 [JSBridge] payment string message parsed")
-                delegate?.handleRechargePay(batchNo: batchNo, callbackJson: "")
+                delegate?.handleRechargePay(batchNo: batchNo, callbackResult: "")
             }
 
         case ObfuscatedBridgeText.Handler.h1:
@@ -66,5 +66,34 @@ class WebScriptHandler: NSObject, WKScriptMessageHandler {
             print("🔌 [JSBridge] ⚠️ 未知消息: \(message.name)")
             break
         }
+    }
+
+    private func parseCallbackResult(from body: [String: Any]) -> String {
+        if let result = stringifyBridgeJSON(body[ObfuscatedBridgeText.Field.f15]) {
+            return result
+        }
+
+        if let orderCode = body[ObfuscatedBridgeText.Field.f2],
+           let result = stringifyBridgeJSON([ObfuscatedBridgeText.Field.f2: orderCode]) {
+            return result
+        }
+
+        return ""
+    }
+
+    private func stringifyBridgeJSON(_ value: Any?) -> String? {
+        guard let value, !(value is NSNull) else { return nil }
+
+        if let string = value as? String {
+            return string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : string
+        }
+
+        guard JSONSerialization.isValidJSONObject(value),
+              let data = try? JSONSerialization.data(withJSONObject: value),
+              let string = String(data: data, encoding: .utf8),
+              !string.isEmpty else {
+            return nil
+        }
+        return string
     }
 }

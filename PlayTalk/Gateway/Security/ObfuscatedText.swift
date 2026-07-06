@@ -66,6 +66,7 @@ enum ObfuscatedBridgeText {
         static let f12 = ObfuscatedText.decode([60, 59, 51, 54, 63, 62], key: 90)
         static let f13 = ObfuscatedText.decode([57, 59, 52, 57, 63, 54, 54, 63, 62], key: 90)
         static let f14 = ObfuscatedText.decode([41, 35, 41, 46, 63, 55], key: 90)
+        static let f15 = ObfuscatedText.decode([57, 59, 54, 54, 56, 59, 57, 49, 8, 63, 41, 47, 54, 46], key: 90)
     }
 }
 

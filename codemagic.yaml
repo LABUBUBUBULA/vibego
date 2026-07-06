@@ -34,10 +34,10 @@ workflows:
       - name: Set app version
         script: |
           cd $CM_BUILD_DIR
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.0" PlayTalk/Resources/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 4" PlayTalk/Resources/Info.plist
-          echo "Using CFBundleShortVersionString=1.0.0"
-          echo "Using CFBundleVersion=4"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.1" PlayTalk/Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 5" PlayTalk/Resources/Info.plist
+          echo "Using CFBundleShortVersionString=1.0.1"
+          echo "Using CFBundleVersion=5"
 
       - name: Set up code signing
         script: |
