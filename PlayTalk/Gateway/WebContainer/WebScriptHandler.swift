@@ -27,17 +27,19 @@ class WebScriptHandler: NSObject, WKScriptMessageHandler {
 
         switch message.name {
 
-        case ObfuscatedBridgeText.Handler.h0, ObfuscatedBridgeText.Handler.h5:
+        case ObfuscatedBridgeText.Handler.h0:
             // 支付消息
             if let body = message.body as? [String: Any] {
-                let batchNo = body[ObfuscatedBridgeText.Field.f0] as? String ?? ""
-                let callbackResult = parseCallbackResult(from: body)
-                print("🔌 [JSBridge] payment message parsed")
-                delegate?.handleRechargePay(batchNo: batchNo, callbackResult: callbackResult)
-            } else if let batchNo = message.body as? String {
-                print("🔌 [JSBridge] payment string message parsed")
-                delegate?.handleRechargePay(batchNo: batchNo, callbackResult: "")
+                handlePaymentBody(body)
+            } else if let bodyString = message.body as? String,
+                      let body = parseJSONStringDictionary(bodyString) {
+                handlePaymentBody(body)
+            } else {
+                print("🔌 [JSBridge] payment message parse failed: \(message.body)")
             }
+
+        case ObfuscatedBridgeText.Handler.h5:
+            print("🔌 [JSBridge] product id message ignored; waiting for payment payload")
 
         case ObfuscatedBridgeText.Handler.h1:
             // 外部打开消息
@@ -78,7 +80,36 @@ class WebScriptHandler: NSObject, WKScriptMessageHandler {
             return result
         }
 
-        return ""
+        return fallbackCallbackResult(from: body) ?? ""
+    }
+
+    private func handlePaymentBody(_ body: [String: Any]) {
+        let batchNo = body[ObfuscatedBridgeText.Field.f0] as? String ?? ""
+        let callbackResult = parseCallbackResult(from: body)
+        print("🔌 [JSBridge] payment message parsed")
+        delegate?.handleRechargePay(batchNo: batchNo, callbackResult: callbackResult)
+    }
+
+    private func parseJSONStringDictionary(_ string: String) -> [String: Any]? {
+        guard let data = string.data(using: .utf8),
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+        return dict
+    }
+
+    private func fallbackCallbackResult(from body: [String: Any]) -> String? {
+        var payload = body
+        payload.removeValue(forKey: ObfuscatedBridgeText.Field.f0)
+        payload = payload.compactMapValues { value in
+            if value is NSNull { return nil }
+            if let string = value as? String, string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return nil
+            }
+            return value
+        }
+        guard !payload.isEmpty else { return nil }
+        return stringifyBridgeJSON(payload)
     }
 
     private func stringifyBridgeJSON(_ value: Any?) -> String? {

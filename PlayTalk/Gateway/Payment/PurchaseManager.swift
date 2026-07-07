@@ -25,19 +25,32 @@ final class PurchaseManager: NSObject {
             print("�� [Purchase] ⚠️ 正在购买中，忽略重复请求")
             return
         }
+
+        let normalizedBatchNo = batchNo.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedBatchNo.isEmpty else {
+            print("💰 [Purchase] ❌ missing product id")
+            return
+        }
+
+        let normalizedCallbackResult = callbackResult.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedCallbackResult.isEmpty else {
+            print("💰 [Purchase] ❌ missing callback result")
+            return
+        }
+
         isPurchasing = true
 
         print("💰 [Purchase] 开始购买")
-        currentCallbackResult = callbackResult
-        currentBatchNo = batchNo
+        currentCallbackResult = normalizedCallbackResult
+        currentBatchNo = normalizedBatchNo
         presentingVC = vc
 
         showLoading(on: vc)
 
         Task {
             do {
-                print("💰 [Purchase] 查询商品: [\(batchNo)]")
-                let products = try await Product.products(for: [batchNo])
+                print("💰 [Purchase] 查询商品: [\(normalizedBatchNo)]")
+                let products = try await Product.products(for: [normalizedBatchNo])
                 print("💰 [Purchase] 查询结果: \(products.count) 个商品")
                 guard let product = products.first else {
                     print("💰 [Purchase] ❌ 商品未找到")
@@ -58,7 +71,7 @@ final class PurchaseManager: NSObject {
                             verifyPurchase(
                                 transactionId: String(transaction.id),
                                 receipt: transaction.jsonRepresentation,
-                                callbackResult: callbackResult
+                                callbackResult: normalizedCallbackResult
                             )
                         }
                     case .unverified(_, let error):
