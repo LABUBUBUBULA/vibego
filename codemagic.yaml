@@ -109,11 +109,11 @@ workflows:
         script: |
           cd $CM_BUILD_DIR
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.2" PlayTalk/Resources/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 15" PlayTalk/Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 16" PlayTalk/Resources/Info.plist
           /usr/libexec/PlistBuddy -c "Delete :PaymentDebugEnabled" PlayTalk/Resources/Info.plist 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Add :PaymentDebugEnabled bool true" PlayTalk/Resources/Info.plist
           echo "Using CFBundleShortVersionString=1.0.2"
-          echo "Using CFBundleVersion=15"
+          echo "Using CFBundleVersion=16"
 
       - name: Set up code signing
         script: |
