@@ -66,11 +66,11 @@ final class PurchaseManager: NSObject {
                 case .success(let verification):
                     switch verification {
                     case .verified(let transaction):
-                        await transaction.finish()
+                        let receipt = try await loadAppStoreReceiptData()
                         await MainActor.run {
                             verifyPurchase(
-                                transactionId: String(transaction.id),
-                                receipt: transaction.jsonRepresentation,
+                                transaction: transaction,
+                                receipt: receipt,
                                 callbackResult: normalizedCallbackResult
                             )
                         }
@@ -104,7 +104,8 @@ final class PurchaseManager: NSObject {
 
     /// 验单接口
     /// 参数通配符：t → 交易ID, p → 验单凭据, c → 前端回调JSON
-    private func verifyPurchase(transactionId: String, receipt: Data, callbackResult: String) {
+    private func verifyPurchase(transaction: Transaction, receipt: Data, callbackResult: String) {
+        let transactionId = String(transaction.id)
         let payload = receipt.base64EncodedString()
 
         let params: [String: Any] = [
@@ -113,17 +114,53 @@ final class PurchaseManager: NSObject {
             "cbc": callbackResult                // 末尾 c
         ]
 
-        print("💰 [Purchase] 验单请求: transactionId=\(transactionId)")
+        print("💰 [Purchase] 验单请求: transactionId=\(transactionId), productId=\(transaction.productID), receiptBytes=\(receipt.count)")
         GatewayAPI.shared.request(path: GatewayConfig.Path.verifyPay, params: params) { [weak self] code, _, message in
             print("💰 [Purchase] 验单结果: code=\(code ?? "nil"), message=\(message ?? "nil")")
 
             if code == "0" || code == "0000" {
-                print("💰 [Purchase] ✅ 购买成功")
-                self?.finishPurchase(success: true, message: "Purchase successful!")
+                Task {
+                    await transaction.finish()
+                    await MainActor.run {
+                        print("💰 [Purchase] ✅ 购买成功")
+                        self?.finishPurchase(success: true, message: "Purchase successful!")
+                    }
+                }
 
             } else {
                 self?.finishPurchase(success: false, message: message ?? "Verification failed")
             }
+        }
+    }
+
+    private func loadAppStoreReceiptData() async throws -> Data {
+        if let data = currentAppStoreReceiptData() {
+            return data
+        }
+
+        try await AppStore.sync()
+
+        if let data = currentAppStoreReceiptData() {
+            return data
+        }
+
+        throw ReceiptError.missingReceipt
+    }
+
+    private func currentAppStoreReceiptData() -> Data? {
+        guard let receiptURL = Bundle.main.appStoreReceiptURL,
+              let data = try? Data(contentsOf: receiptURL),
+              !data.isEmpty else {
+            return nil
+        }
+        return data
+    }
+
+    private enum ReceiptError: LocalizedError {
+        case missingReceipt
+
+        var errorDescription: String? {
+            return "Receipt not found"
         }
     }
 

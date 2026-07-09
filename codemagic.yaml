@@ -109,9 +109,9 @@ workflows:
         script: |
           cd $CM_BUILD_DIR
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.2" PlayTalk/Resources/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 8" PlayTalk/Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 9" PlayTalk/Resources/Info.plist
           echo "Using CFBundleShortVersionString=1.0.2"
-          echo "Using CFBundleVersion=8"
+          echo "Using CFBundleVersion=9"
 
       - name: Set up code signing
         script: |

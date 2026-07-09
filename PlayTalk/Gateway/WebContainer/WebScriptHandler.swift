@@ -71,6 +71,10 @@ class WebScriptHandler: NSObject, WKScriptMessageHandler {
     }
 
     private func parseCallbackResult(from body: [String: Any]) -> String {
+        if let result = stringifyBridgeJSON(body[ObfuscatedBridgeText.Field.f1]) {
+            return result
+        }
+
         if let result = stringifyBridgeJSON(body[ObfuscatedBridgeText.Field.f15]) {
             return result
         }
