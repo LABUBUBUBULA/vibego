@@ -20,6 +20,7 @@ final class PurchaseManager: NSObject {
     private var currentPaymentDiagnostic: String = ""
     private var receiptRefreshContinuation: CheckedContinuation<Void, Error>?
     private var receiptRefreshRequest: SKReceiptRefreshRequest?
+    private let missingTransactionRetryDelays: [UInt64] = [2, 5, 10, 15]
 
     // MARK: - 发起购买
 
@@ -117,7 +118,13 @@ final class PurchaseManager: NSObject {
 
     /// 验单接口
     /// 参数通配符：t → 交易ID, p → 验单凭据, c → 前端回调JSON
-    private func verifyPurchase(transaction: Transaction, receipt: Data, callbackResult: String, purchaseID: UUID) {
+    private func verifyPurchase(
+        transaction: Transaction,
+        receipt: Data,
+        callbackResult: String,
+        purchaseID: UUID,
+        attempt: Int = 0
+    ) {
         let transactionId = String(transaction.id)
         let payload = receipt.base64EncodedString()
 
@@ -128,6 +135,7 @@ final class PurchaseManager: NSObject {
         ]
         let diagnostic = """
         stage=verify
+        attempt=\(attempt + 1)
         tx=\(transactionId)
         pid=\(transaction.productID)
         receiptBytes=\(receipt.count)
@@ -151,6 +159,18 @@ final class PurchaseManager: NSObject {
                 }
 
             } else {
+                if let self,
+                   self.shouldRetryMissingTransaction(code: code, message: message),
+                   attempt < self.missingTransactionRetryDelays.count {
+                    self.retryPurchaseVerification(
+                        transaction: transaction,
+                        callbackResult: callbackResult,
+                        purchaseID: purchaseID,
+                        nextAttempt: attempt + 1
+                    )
+                    return
+                }
+
                 let detail = """
                 \(diagnostic)
                 code=\(code ?? "nil")
@@ -161,6 +181,54 @@ final class PurchaseManager: NSObject {
                     diagnostics: detail
                 ) ?? (message ?? "Verification failed")
                 self?.finishPurchase(success: false, message: displayMessage)
+            }
+        }
+    }
+
+    private func shouldRetryMissingTransaction(code: String?, message: String?) -> Bool {
+        let normalizedMessage = (message ?? "").lowercased()
+        return code == "1033" || normalizedMessage.contains("not in the transaction list")
+    }
+
+    private func retryPurchaseVerification(
+        transaction: Transaction,
+        callbackResult: String,
+        purchaseID: UUID,
+        nextAttempt: Int
+    ) {
+        let delay = missingTransactionRetryDelays[nextAttempt - 1]
+        currentPaymentDiagnostic += """
+
+        retryAfterSeconds=\(delay)
+        retryAttempt=\(nextAttempt + 1)
+        """
+
+        Task { [weak self] in
+            try? await Task.sleep(nanoseconds: delay * 1_000_000_000)
+            guard let self, self.activePurchaseID == purchaseID else {
+                return
+            }
+
+            do {
+                let refreshedReceipt = try await self.loadAppStoreReceiptData(refreshBeforeRead: true)
+                await MainActor.run {
+                    guard self.activePurchaseID == purchaseID else { return }
+                    self.verifyPurchase(
+                        transaction: transaction,
+                        receipt: refreshedReceipt,
+                        callbackResult: callbackResult,
+                        purchaseID: purchaseID,
+                        attempt: nextAttempt
+                    )
+                }
+            } catch {
+                await MainActor.run {
+                    let message = self.paymentMessage(
+                        error.localizedDescription,
+                        diagnostics: self.currentPaymentDiagnostic
+                    )
+                    self.finishPurchase(success: false, message: message)
+                }
             }
         }
     }
