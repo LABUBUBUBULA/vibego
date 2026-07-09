@@ -8,6 +8,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         Task { @MainActor in
             CoinPurchaseManager.shared.start()
         }
+        PurchaseManager.shared.start()
         return true
     }
 

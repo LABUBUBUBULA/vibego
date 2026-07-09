@@ -25,4 +25,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     @objc private func dismissKeyboard() {
         window?.endEditing(true)
     }
+
+    func sceneDidBecomeActive(_ scene: UIScene) {
+        PurchaseManager.shared.retryUnfinishedTransactions(reason: "scene_active")
+    }
 }
