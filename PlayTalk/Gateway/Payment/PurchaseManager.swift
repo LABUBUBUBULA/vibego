@@ -78,7 +78,7 @@ final class PurchaseManager: NSObject {
                 case .success(let verification):
                     switch verification {
                     case .verified(let transaction):
-                        let receipt = try await loadAppStoreReceiptData()
+                        let receipt = try await loadAppStoreReceiptData(refreshBeforeRead: true)
                         await MainActor.run {
                             verifyPurchase(
                                 transaction: transaction,
@@ -165,15 +165,15 @@ final class PurchaseManager: NSObject {
         }
     }
 
-    private func loadAppStoreReceiptData() async throws -> Data {
-        if let data = currentAppStoreReceiptData() {
+    private func loadAppStoreReceiptData(refreshBeforeRead: Bool = false) async throws -> Data {
+        if !refreshBeforeRead, let data = currentAppStoreReceiptData() {
             return data
         }
 
         let receiptPath = Bundle.main.appStoreReceiptURL?.path ?? "nil"
         currentPaymentDiagnostic += """
 
-        receiptStage=missing_before_refresh
+        receiptStage=\(refreshBeforeRead ? "refresh_before_verify" : "missing_before_refresh")
         receiptPath=\(receiptPath)
         """
 
