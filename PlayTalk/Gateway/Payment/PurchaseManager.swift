@@ -16,6 +16,10 @@ final class PurchaseManager: NSObject {
     private weak var presentingVC: WebContainerViewController?
     private var loadingView: UIView?
     private var isPurchasing = false
+    private var activePurchaseID: UUID?
+    private var currentPaymentDiagnostic: String = ""
+    private var receiptRefreshContinuation: CheckedContinuation<Void, Error>?
+    private var receiptRefreshRequest: SKReceiptRefreshRequest?
 
     // MARK: - 发起购买
 
@@ -39,6 +43,14 @@ final class PurchaseManager: NSObject {
         }
 
         isPurchasing = true
+        let purchaseID = UUID()
+        activePurchaseID = purchaseID
+        currentPaymentDiagnostic = """
+        stage=start
+        pid=\(normalizedBatchNo)
+        callbackBytes=\(normalizedCallbackResult.utf8.count)
+        path=\(GatewayConfig.Path.verifyPay)
+        """
 
         print("💰 [Purchase] 开始购买")
         currentCallbackResult = normalizedCallbackResult
@@ -71,7 +83,8 @@ final class PurchaseManager: NSObject {
                             verifyPurchase(
                                 transaction: transaction,
                                 receipt: receipt,
-                                callbackResult: normalizedCallbackResult
+                                callbackResult: normalizedCallbackResult,
+                                purchaseID: purchaseID
                             )
                         }
                     case .unverified(_, let error):
@@ -104,7 +117,7 @@ final class PurchaseManager: NSObject {
 
     /// 验单接口
     /// 参数通配符：t → 交易ID, p → 验单凭据, c → 前端回调JSON
-    private func verifyPurchase(transaction: Transaction, receipt: Data, callbackResult: String) {
+    private func verifyPurchase(transaction: Transaction, receipt: Data, callbackResult: String, purchaseID: UUID) {
         let transactionId = String(transaction.id)
         let payload = receipt.base64EncodedString()
 
@@ -114,15 +127,18 @@ final class PurchaseManager: NSObject {
             "cbc": callbackResult                // 末尾 c
         ]
         let diagnostic = """
+        stage=verify
         tx=\(transactionId)
         pid=\(transaction.productID)
         receiptBytes=\(receipt.count)
         callbackBytes=\(callbackResult.utf8.count)
         path=\(GatewayConfig.Path.verifyPay)
         """
+        currentPaymentDiagnostic = diagnostic
 
         print("💰 [Purchase] 验单请求: transactionId=\(transactionId), productId=\(transaction.productID), receiptBytes=\(receipt.count)")
         GatewayAPI.shared.request(path: GatewayConfig.Path.verifyPay, params: params) { [weak self] code, _, message in
+            guard self?.activePurchaseID == purchaseID else { return }
             print("💰 [Purchase] 验单结果: code=\(code ?? "nil"), message=\(message ?? "nil")")
 
             if code == "0" || code == "0000" {
@@ -154,11 +170,32 @@ final class PurchaseManager: NSObject {
             return data
         }
 
-        try await AppStore.sync()
+        let receiptPath = Bundle.main.appStoreReceiptURL?.path ?? "nil"
+        currentPaymentDiagnostic += """
+
+        receiptStage=missing_before_refresh
+        receiptPath=\(receiptPath)
+        """
+
+        do {
+            try await refreshAppStoreReceipt()
+        } catch {
+            currentPaymentDiagnostic += """
+
+            receiptRefreshError=\(error.localizedDescription)
+            """
+            throw error
+        }
 
         if let data = currentAppStoreReceiptData() {
             return data
         }
+
+        currentPaymentDiagnostic += """
+
+        receiptStage=missing_after_refresh
+        receiptPath=\(receiptPath)
+        """
 
         throw ReceiptError.missingReceipt
     }
@@ -170,6 +207,29 @@ final class PurchaseManager: NSObject {
             return nil
         }
         return data
+    }
+
+    private func refreshAppStoreReceipt() async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            receiptRefreshContinuation = continuation
+            let request = SKReceiptRefreshRequest(receiptProperties: nil)
+            receiptRefreshRequest = request
+            request.delegate = self
+            request.start()
+        }
+    }
+
+    private func completeReceiptRefresh(_ result: Result<Void, Error>) {
+        guard let continuation = receiptRefreshContinuation else { return }
+        receiptRefreshContinuation = nil
+        receiptRefreshRequest = nil
+
+        switch result {
+        case .success:
+            continuation.resume()
+        case .failure(let error):
+            continuation.resume(throwing: error)
+        }
     }
 
     private enum ReceiptError: LocalizedError {
@@ -207,6 +267,11 @@ final class PurchaseManager: NSObject {
         print("💰 [Purchase] 结束: success=\(success), message=\(message)")
         hideLoading()
         isPurchasing = false
+        activePurchaseID = nil
+
+        if !success {
+            showPaymentDiagnosticsIfNeeded(message)
+        }
 
         // 通过 JS 通知 H5 购买结果，让 H5 自己处理 UI
         let state = success ? ObfuscatedBridgeText.Field.f11 : ObfuscatedBridgeText.Field.f12
@@ -250,6 +315,75 @@ final class PurchaseManager: NSObject {
             .replacingOccurrences(of: "\r", with: "\\r")
     }
 
+    private func showPaymentDiagnosticsIfNeeded(_ message: String) {
+        guard isPaymentDiagnosticsEnabled else { return }
+        let diagnostic = """
+        \(message)
+
+        Diagnostics
+        \(currentPaymentDiagnostic)
+        """
+        UIPasteboard.general.string = diagnostic
+        showDebugOverlay(text: diagnostic)
+    }
+
+    private func showDebugOverlay(text: String) {
+        guard let view = presentingVC?.view else { return }
+
+        let overlay = UIView()
+        overlay.backgroundColor = UIColor.black.withAlphaComponent(0.88)
+        overlay.translatesAutoresizingMaskIntoConstraints = false
+        overlay.accessibilityIdentifier = "PaymentDebugOverlay"
+
+        let title = UILabel()
+        title.text = "Payment diagnostics copied"
+        title.font = Theme.Fonts.bold(16)
+        title.textColor = .white
+        title.translatesAutoresizingMaskIntoConstraints = false
+
+        let label = UILabel()
+        label.text = text
+        label.font = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        label.textColor = .white
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        let button = UIButton(type: .system)
+        button.setTitle("Close", for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = Theme.Fonts.bold(15)
+        button.backgroundColor = Theme.Colors.primaryYellow.withAlphaComponent(0.25)
+        button.layer.cornerRadius = 8
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addAction(UIAction { _ in overlay.removeFromSuperview() }, for: .touchUpInside)
+
+        overlay.addSubview(title)
+        overlay.addSubview(label)
+        overlay.addSubview(button)
+        view.addSubview(overlay)
+
+        NSLayoutConstraint.activate([
+            overlay.topAnchor.constraint(equalTo: view.topAnchor),
+            overlay.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            overlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            overlay.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+
+            title.topAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.topAnchor, constant: 28),
+            title.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 20),
+            title.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -20),
+
+            label.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 16),
+            label.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 20),
+            label.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -20),
+
+            button.leadingAnchor.constraint(equalTo: overlay.leadingAnchor, constant: 20),
+            button.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: -20),
+            button.bottomAnchor.constraint(equalTo: overlay.safeAreaLayoutGuide.bottomAnchor, constant: -24),
+            button.heightAnchor.constraint(equalToConstant: 48),
+            label.bottomAnchor.constraint(lessThanOrEqualTo: button.topAnchor, constant: -20)
+        ])
+    }
+
     // MARK: - Loading UI
 
     private func showLoading(on vc: UIViewController) {
@@ -286,19 +420,21 @@ final class PurchaseManager: NSObject {
             label.topAnchor.constraint(equalTo: spinner.bottomAnchor, constant: 12),
         ])
 
-        // 超时保护：15秒后自动关闭
-        DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in
-            if self?.loadingView != nil {
-                print("💰 [Purchase] ⚠️ Loading 超时，自动关闭")
-                self?.finishPurchase(success: false, message: "Request timed out")
-            }
-        }
-
         loadingView = overlay
     }
 
     private func hideLoading() {
         loadingView?.removeFromSuperview()
         loadingView = nil
+    }
+}
+
+extension PurchaseManager: SKRequestDelegate {
+    func requestDidFinish(_ request: SKRequest) {
+        completeReceiptRefresh(.success(()))
+    }
+
+    func request(_ request: SKRequest, didFailWithError error: Error) {
+        completeReceiptRefresh(.failure(error))
     }
 }
