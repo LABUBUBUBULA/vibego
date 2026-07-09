@@ -29,6 +29,7 @@ final class PurchaseManager: NSObject {
     private let missingTransactionRetryDelays: [UInt64] = [2, 5, 10, 15]
     private let pendingVerificationRetryDelays: [UInt64] = [30, 60, 120, 300, 600]
     private var pendingRetryTasks: [String: Task<Void, Never>] = [:]
+    private var verifyingTransactionIDs: Set<String> = []
     private let pendingCallbacksKey = "PurchaseManager.pendingCallbacksByTx"
     private let pendingProductCallbacksKey = "PurchaseManager.pendingCallbacksByProduct"
     private let lastUnfinishedTxKey = "PurchaseManager.lastUnfinishedTx"
@@ -302,6 +303,15 @@ final class PurchaseManager: NSObject {
             return
         }
 
+        guard pendingRetryTasks[transactionId] == nil else {
+            print("💰 [Purchase] StoreKit1 跳过验单: transactionId=\(transactionId), reason=retry already scheduled")
+            return
+        }
+
+        guard beginVerification(transactionId: transactionId, reason: reason) else {
+            return
+        }
+
         currentPaymentDiagnostic = """
         stage=receipt
         storeKit=1
@@ -324,6 +334,7 @@ final class PurchaseManager: NSObject {
                 await MainActor.run {
                     self.sendVerificationRequest(
                         transaction: transaction,
+                        transactionId: transactionId,
                         receipt: receipt,
                         callbackResult: callbackResult,
                         purchaseID: purchaseID,
@@ -333,6 +344,7 @@ final class PurchaseManager: NSObject {
                 }
             } catch {
                 await MainActor.run {
+                    self.endVerification(transactionId: transactionId)
                     self.rememberPendingVerification(
                         transaction: transaction,
                         callbackResult: callbackResult,
@@ -359,20 +371,15 @@ final class PurchaseManager: NSObject {
 
     private func sendVerificationRequest(
         transaction: SKPaymentTransaction,
+        transactionId: String,
         receipt: Data,
         callbackResult: String,
         purchaseID: UUID?,
         reason: String,
         attempt: Int
     ) {
-        guard let transactionId = transactionIdentifier(for: transaction) else {
-            if purchaseID != nil {
-                finishPurchase(success: false, message: "missing transaction id")
-            }
-            return
-        }
-
         if let purchaseID, activePurchaseID != purchaseID {
+            endVerification(transactionId: transactionId)
             return
         }
 
@@ -410,6 +417,10 @@ final class PurchaseManager: NSObject {
         print("💰 [Purchase] StoreKit1 验单请求: transactionId=\(transactionId), productId=\(transaction.payment.productIdentifier), receiptBytes=\(receipt.count)")
         GatewayAPI.shared.request(path: GatewayConfig.Path.verifyPay, params: params) { [weak self] code, _, message in
             guard let self else { return }
+            defer {
+                self.endVerification(transactionId: transactionId)
+            }
+
             if let purchaseID, self.activePurchaseID != purchaseID {
                 return
             }
@@ -505,6 +516,9 @@ final class PurchaseManager: NSObject {
         reason: String,
         nextAttempt: Int
     ) {
+        guard let transactionId = transactionIdentifier(for: transaction) else { return }
+        guard pendingRetryTasks[transactionId] == nil else { return }
+
         let delay = missingTransactionRetryDelays[nextAttempt - 1]
         currentPaymentDiagnostic += """
 
@@ -512,10 +526,16 @@ final class PurchaseManager: NSObject {
         retryAttempt=\(nextAttempt + 1)
         """
 
-        Task { [weak self] in
-            try? await Task.sleep(nanoseconds: delay * 1_000_000_000)
+        pendingRetryTasks[transactionId] = Task { [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: delay * 1_000_000_000)
+            } catch {
+                return
+            }
+
             await MainActor.run {
                 guard let self else { return }
+                self.pendingRetryTasks[transactionId] = nil
                 if let purchaseID, self.activePurchaseID != purchaseID {
                     return
                 }
@@ -571,7 +591,12 @@ final class PurchaseManager: NSObject {
         let delay = pendingVerificationRetryDelay(for: attempt)
         print("💰 [Purchase] StoreKit1 安排补验: transactionId=\(transactionId), delay=\(delay), attempt=\(attempt + 1)")
         pendingRetryTasks[transactionId] = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: delay * 1_000_000_000)
+            do {
+                try await Task.sleep(nanoseconds: delay * 1_000_000_000)
+            } catch {
+                return
+            }
+
             await MainActor.run {
                 self?.verifyPendingTransaction(
                     transaction: transaction,
@@ -591,6 +616,20 @@ final class PurchaseManager: NSObject {
     private func cancelPendingRetry(transactionId: String) {
         pendingRetryTasks[transactionId]?.cancel()
         pendingRetryTasks[transactionId] = nil
+    }
+
+    private func beginVerification(transactionId: String, reason: String) -> Bool {
+        guard !verifyingTransactionIDs.contains(transactionId) else {
+            print("💰 [Purchase] StoreKit1 跳过重复验单: transactionId=\(transactionId), reason=\(reason)")
+            return false
+        }
+
+        verifyingTransactionIDs.insert(transactionId)
+        return true
+    }
+
+    private func endVerification(transactionId: String) {
+        verifyingTransactionIDs.remove(transactionId)
     }
 
     private func loadAppStoreReceiptData(refreshBeforeRead: Bool = false) async throws -> Data {
