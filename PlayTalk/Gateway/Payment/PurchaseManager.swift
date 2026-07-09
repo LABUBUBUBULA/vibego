@@ -113,6 +113,13 @@ final class PurchaseManager: NSObject {
             "plp": payload,                      // 末尾 p
             "cbc": callbackResult                // 末尾 c
         ]
+        let diagnostic = """
+        tx=\(transactionId)
+        pid=\(transaction.productID)
+        receiptBytes=\(receipt.count)
+        callbackBytes=\(callbackResult.utf8.count)
+        path=\(GatewayConfig.Path.verifyPay)
+        """
 
         print("💰 [Purchase] 验单请求: transactionId=\(transactionId), productId=\(transaction.productID), receiptBytes=\(receipt.count)")
         GatewayAPI.shared.request(path: GatewayConfig.Path.verifyPay, params: params) { [weak self] code, _, message in
@@ -128,7 +135,16 @@ final class PurchaseManager: NSObject {
                 }
 
             } else {
-                self?.finishPurchase(success: false, message: message ?? "Verification failed")
+                let detail = """
+                \(diagnostic)
+                code=\(code ?? "nil")
+                message=\(message ?? "nil")
+                """
+                let displayMessage = self?.paymentMessage(
+                    message ?? "Verification failed",
+                    diagnostics: detail
+                ) ?? (message ?? "Verification failed")
+                self?.finishPurchase(success: false, message: displayMessage)
             }
         }
     }
@@ -164,6 +180,26 @@ final class PurchaseManager: NSObject {
         }
     }
 
+    private var isPaymentDiagnosticsEnabled: Bool {
+        if let enabled = Bundle.main.object(forInfoDictionaryKey: "PaymentDebugEnabled") as? Bool {
+            return enabled
+        }
+        if let value = Bundle.main.object(forInfoDictionaryKey: "PaymentDebugEnabled") as? String {
+            return ["1", "true", "yes"].contains(value.lowercased())
+        }
+        return false
+    }
+
+    private func paymentMessage(_ message: String, diagnostics: String) -> String {
+        guard isPaymentDiagnosticsEnabled else { return message }
+        return """
+        \(message)
+
+        Diagnostics
+        \(diagnostics)
+        """
+    }
+
     // MARK: - 统一结束购买
 
     /// 购买结束（成功/失败）：隐藏loading + 通知H5 + 重置状态
@@ -174,7 +210,7 @@ final class PurchaseManager: NSObject {
 
         // 通过 JS 通知 H5 购买结果，让 H5 自己处理 UI
         let state = success ? ObfuscatedBridgeText.Field.f11 : ObfuscatedBridgeText.Field.f12
-        let safeMessage = message.replacingOccurrences(of: "'", with: "\\'")
+        let safeMessage = jsEscapedString(message)
         let event = ObfuscatedBridgeText.Event.e2
         let stateKey = ObfuscatedBridgeText.Field.f5
         let messageKey = ObfuscatedBridgeText.Field.f6
@@ -204,6 +240,14 @@ final class PurchaseManager: NSObject {
         } else {
             vc.present(alert, animated: true)
         }
+    }
+
+    private func jsEscapedString(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "'", with: "\\'")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\r", with: "\\r")
     }
 
     // MARK: - Loading UI
