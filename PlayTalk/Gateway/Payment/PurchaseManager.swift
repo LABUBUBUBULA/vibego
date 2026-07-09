@@ -21,6 +21,10 @@ final class PurchaseManager: NSObject {
     private var receiptRefreshContinuation: CheckedContinuation<Void, Error>?
     private var receiptRefreshRequest: SKReceiptRefreshRequest?
     private let missingTransactionRetryDelays: [UInt64] = [2, 5, 10, 15]
+    private let lastUnfinishedTxKey = "PurchaseManager.lastUnfinishedTx"
+    private let lastUnfinishedPidKey = "PurchaseManager.lastUnfinishedPid"
+    private let lastUnfinishedAtKey = "PurchaseManager.lastUnfinishedAt"
+    private let lastUnfinishedReasonKey = "PurchaseManager.lastUnfinishedReason"
 
     // MARK: - 发起购买
 
@@ -48,9 +52,11 @@ final class PurchaseManager: NSObject {
         activePurchaseID = purchaseID
         currentPaymentDiagnostic = """
         stage=start
+        purchaseID=\(purchaseID.uuidString)
         pid=\(normalizedBatchNo)
         callbackBytes=\(normalizedCallbackResult.utf8.count)
         path=\(GatewayConfig.Path.verifyPay)
+        \(lastUnfinishedTransactionDiagnostic())
         """
 
         print("💰 [Purchase] 开始购买")
@@ -135,12 +141,23 @@ final class PurchaseManager: NSObject {
         ]
         let diagnostic = """
         stage=verify
+        purchaseID=\(purchaseID.uuidString)
         attempt=\(attempt + 1)
         tx=\(transactionId)
+        originalTx=\(transaction.originalID)
+        sameAsLastUnfinishedTx=\(transactionId == lastUnfinishedTransactionID() ? "true" : "false")
         pid=\(transaction.productID)
+        purchaseDate=\(iso8601String(from: transaction.purchaseDate))
         receiptBytes=\(receipt.count)
         callbackBytes=\(callbackResult.utf8.count)
         path=\(GatewayConfig.Path.verifyPay)
+        decryptedRequestParams.trt=\(transactionId)
+        decryptedRequestParams.plpBytes=\(receipt.count)
+        decryptedRequestParams.plpBase64Bytes=\(payload.utf8.count)
+        decryptedRequestParams.plpPrefix=\(payload.prefix(80))
+        decryptedRequestParams.plpSuffix=\(payload.suffix(48))
+        decryptedRequestParams.cbc=\(callbackResult)
+        \(lastUnfinishedTransactionDiagnostic())
         """
         currentPaymentDiagnostic = diagnostic
 
@@ -153,6 +170,7 @@ final class PurchaseManager: NSObject {
                 Task {
                     await transaction.finish()
                     await MainActor.run {
+                        self?.clearUnfinishedTransactionIfNeeded(transactionId: transactionId)
                         print("💰 [Purchase] ✅ 购买成功")
                         self?.finishPurchase(success: true, message: "Purchase successful!")
                     }
@@ -173,9 +191,11 @@ final class PurchaseManager: NSObject {
 
                 let detail = """
                 \(diagnostic)
+                backendResponse=received
                 code=\(code ?? "nil")
                 message=\(message ?? "nil")
                 """
+                self?.rememberUnfinishedTransaction(transaction: transaction, code: code, message: message)
                 let displayMessage = self?.paymentMessage(
                     message ?? "Verification failed",
                     diagnostics: detail
@@ -223,6 +243,7 @@ final class PurchaseManager: NSObject {
                 }
             } catch {
                 await MainActor.run {
+                    self.rememberUnfinishedTransaction(transaction: transaction, code: nil, message: error.localizedDescription)
                     let message = self.paymentMessage(
                         error.localizedDescription,
                         diagnostics: self.currentPaymentDiagnostic
@@ -298,6 +319,46 @@ final class PurchaseManager: NSObject {
         case .failure(let error):
             continuation.resume(throwing: error)
         }
+    }
+
+    private func lastUnfinishedTransactionID() -> String? {
+        UserDefaults.standard.string(forKey: lastUnfinishedTxKey)
+    }
+
+    private func lastUnfinishedTransactionDiagnostic() -> String {
+        guard let tx = UserDefaults.standard.string(forKey: lastUnfinishedTxKey), !tx.isEmpty else {
+            return "lastUnfinishedTx=none"
+        }
+
+        let pid = UserDefaults.standard.string(forKey: lastUnfinishedPidKey) ?? "nil"
+        let at = UserDefaults.standard.string(forKey: lastUnfinishedAtKey) ?? "nil"
+        let reason = UserDefaults.standard.string(forKey: lastUnfinishedReasonKey) ?? "nil"
+        return """
+        lastUnfinishedTx=\(tx)
+        lastUnfinishedPid=\(pid)
+        lastUnfinishedAt=\(at)
+        lastUnfinishedReason=\(reason)
+        """
+    }
+
+    private func rememberUnfinishedTransaction(transaction: Transaction, code: String?, message: String?) {
+        let tx = String(transaction.id)
+        UserDefaults.standard.set(tx, forKey: lastUnfinishedTxKey)
+        UserDefaults.standard.set(transaction.productID, forKey: lastUnfinishedPidKey)
+        UserDefaults.standard.set(iso8601String(from: Date()), forKey: lastUnfinishedAtKey)
+        UserDefaults.standard.set("\(code ?? "nil"):\(message ?? "nil")", forKey: lastUnfinishedReasonKey)
+    }
+
+    private func clearUnfinishedTransactionIfNeeded(transactionId: String) {
+        guard UserDefaults.standard.string(forKey: lastUnfinishedTxKey) == transactionId else { return }
+        UserDefaults.standard.removeObject(forKey: lastUnfinishedTxKey)
+        UserDefaults.standard.removeObject(forKey: lastUnfinishedPidKey)
+        UserDefaults.standard.removeObject(forKey: lastUnfinishedAtKey)
+        UserDefaults.standard.removeObject(forKey: lastUnfinishedReasonKey)
+    }
+
+    private func iso8601String(from date: Date) -> String {
+        ISO8601DateFormatter().string(from: date)
     }
 
     private enum ReceiptError: LocalizedError {
