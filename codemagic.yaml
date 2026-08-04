@@ -34,10 +34,10 @@ workflows:
       - name: Set app version
         script: |
           cd $CM_BUILD_DIR
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.3" PlayTalk/Resources/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 18" PlayTalk/Resources/Info.plist
-          echo "Using CFBundleShortVersionString=1.0.3"
-          echo "Using CFBundleVersion=18"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.4" PlayTalk/Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 19" PlayTalk/Resources/Info.plist
+          echo "Using CFBundleShortVersionString=1.0.4"
+          echo "Using CFBundleVersion=19"
 
       - name: Set up code signing
         script: |
@@ -108,11 +108,11 @@ workflows:
       - name: Set app version
         script: |
           cd $CM_BUILD_DIR
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.3" PlayTalk/Resources/Info.plist
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 18" PlayTalk/Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.0.4" PlayTalk/Resources/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 19" PlayTalk/Resources/Info.plist
           /usr/libexec/PlistBuddy -c "Delete :PaymentDebugEnabled" PlayTalk/Resources/Info.plist 2>/dev/null || true
-          echo "Using CFBundleShortVersionString=1.0.3"
-          echo "Using CFBundleVersion=18"
+          echo "Using CFBundleShortVersionString=1.0.4"
+          echo "Using CFBundleVersion=19"
 
       - name: Set up code signing
         script: |
